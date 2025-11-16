@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Portfolio</title>
+    <style is:global>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color: #272932;
+            --text-color: #E7ECEF;
+            --secondary-color: #4EB3B5;
+            --prompt-color: #D8A47F;
+            --error-color: #F05F5E;
+            --highlight-color: #D8A47F;
+            --link-color: #F4A6A3;
+            --link-hover-color: #E57373;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            line-height: 1.6;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .terminal-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+            padding-left: 100px;
+            padding-right: 60px;
+            min-height: 100vh;
+        }
+
+        .output-line {
+            margin-bottom: 0px;
+            white-space: pre-wrap;
+            /* no color here so child spans can take their own colors */
+        }
+
+        .section-heading,
+        .output-line .section-heading,
+        span.section-heading {
+            color: var(--secondary-color) !important;
+            font-weight: bold;
+        }
+
+        .prompt, 
+        .output-line .prompt,
+        span.prompt,
+        .output-line > .prompt {
+            color: var(--prompt-color) !important;
+            font-weight: bold;
+        }
+
+        .command,
+        .output-line .command,
+        span.command {
+            color: var(--highlight-color) !important;
+        }
+
+        .section-title,
+        .output-line .section-title,
+        span.section-title {
+            color: var(--highlight-color) !important;
+            font-size: 1.2em;
+            margin: 20px 0 10px;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 5px;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+            margin-top: 0px;
+        }
+
+        .input-line .prompt {
+            margin-right: 8px;
+        }
+
+        #command-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            caret-color: var(--text-color);
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background: var(--text-color);
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        .help-command {
+            color: var(--prompt-color);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .help-command:hover {
+            color: var(--highlight-color);
+        }
+
+        .error,
+        .output-line .error,
+        span.error {
+            color: var(--error-color) !important;
+        }
+
+        .link,
+        .output-line .link {
+            color: var(--prompt-color) !important;
+            text-decoration: underline;
+        }
+
+        .link:hover {
+            color: var(--highlight-color) !important;
+        }
+
+        .subtle_link,
+        .output-line .link {
+            text-decoration: underline;
+        }
+
+        a {
+            color: var(--link-color) !important;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--link-hover-color) !important;
+            text-decoration: underline;
+        }
+
+        .ascii-art {
+            color: var(--secondary-color);
+            line-height: 1.2;
+            margin: 10px 0;
+            white-space: pre;
+        }
+
+        .skill-item {
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 5px;
+        }
+
+        .project-item {
+            margin-bottom: 15px;
+            padding-left: 20px;
+            border-left: 2px solid var(--secondary-color);
+        }
+
+        .tab-hint,
+        .output-line .tab-hint,
+        span.tab-hint {
+            color: var(--secondary-color) !important;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+
+        .autocomplete-hint {
+            color: var(--text-color) !important;
+            font-size: 0.9em;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .panel-box {
+            border: 1px solid var(--text-color);
+            padding: 15px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            background-color: rgba(231, 236, 239, 0.03);
+            border-radius: 2px;
+            max-width: 900px;
+        }
+
+        .intro-text {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <div id="output">
+            <div id="initial-content">
+               <pre class="ascii-art">
+ ______     ______     __     ______        ______     __  __     __   __    
+/\  ___\   /\  == \   /\ \   /\  ___\      /\  ___\   /\ \/\ \   /\ "-.\ \   
+\ \  __\   \ \  __&lt   \ \ \  \ \ \____     \ \___  \  \ \ \_\ \  \ \ \-.  \  
+ \ \_____\  \ \_\ \_\  \ \_\  \ \_____\     \/\_____\  \ \_____\  \ \_\\"\_\ 
+  \/_____/   \/_/ /_/   \/_/   \/_____/      \/_____/   \/_____/   \/_/ \/_/   
+                </pre>
+                <div class="output-line"><a href="https://github.com/therealericsun" target="_blank">GitHub</a> | <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank">LinkedIn</a> | <a href="https://scholar.google.com/citations?user=lAt-xWMAAAAJ&hl=en" target="_blank">Google Scholar</a> | <a href="mailto:ericsun@seas.upenn.edu">Email</a> | <a href="/Eric_Sun_Resume.pdf" download>Resume</a></div>
+                <div style="height: 15px;"></div>
+                <div class="output-line intro-text">My name is Eric Sun (he/him). I'm currently studying at the University of Pennsylvania for a joint BA/MS in Physics and a BSE in Computer Science. My primary interests are in machine learning, optimization, and low-latency programming. I dabble a little in web and cloud development too.</div>
+                <div style="height: 15px;"></div>
+                <div class="output-line">Type <span class="command">help</span> to see available commands.</div>
+                <div class="output-line tab-hint">Tip: Use TAB for command autocomplete and UP/DOWN to scroll terminal history</div>
+                <div class="output-line">─────────────────────────────────────────────────────────</div>
+            </div>
+        </div>
+        <div class="input-line">
+            <span class="prompt">visitor@portfolio:~$</span>
+            <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false" />
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const input = document.getElementById('command-input');
+        const commandHistory = [];
+        let historyIndex = -1;
+        let autocompleteElement = null;
+
+        const commands = {
+            help: {
+                description: 'Display available commands',
+                execute: () => {
+                    return `<div class="panel-box">Available commands:<br>  <span class="command">skills</span>     - View my technical skills<br>  <span class="command">projects</span>   - See my projects<br>  <span class="command">contact</span>    - Get my contact information<br>  <span class="command">experience</span> - View my work experience<br>  <span class="command">clear</span>      - Clear the terminal<br>  <span class="command">help</span>       - Display this help message<br>  <span class="command">ascii</span>      - Show ASCII art</div>`;
+                }
+            },
+            skills: {
+                description: 'List technical skills',
+                execute: () => {
+                    return `<div class="panel-box"><span class="section-heading">Languages:</span> Python, C++, C, Javascript / Typescript, SQL</div><div class="panel-box"><span class="section-heading">Libraries:</span> PyTorch, Scikit-learn, Pandas, Polars, OpenCV, NumPy, SciPy, Sphinx, Matplotlib, Selenium, FastAPI, FastMCP, SQLalchemy, Prefect, MyPy, Ruff, Pydantic, Pybind11, Astro, Express, React</div><div class="panel-box"><span class="section-heading">Tools:</span> Git, Docker, PostgreSQL, Slurm, Jupyter, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, Aurora, Neptune)</div>`;
+                }
+            },
+            projects: {
+                description: 'Show project portfolio',
+                execute: () => {
+                    return `<div class="panel-box"><span class="section-heading">This website</span><br>  A fully interactive terminal-style portfolio website<br>  <a href="https://github.com/therealericsun/TerminalPortfolio" target="_blank">→ View on GitHub</a></div><div class="panel-box"><span class="section-heading">FLASH: An extremely fast solver of the radial Schrödinger and Dirac equations in C++</span><br>  High-performance quantum mechanics solver for computational physics<br>  <a href="https://github.com/example/flash" target="_blank">→ View on GitHub</a></div><div class="panel-box"><span class="section-heading">DeepARPES: Convolutional autoencoder pipeline for Angle-Resolved Photoemission Spectroscopy</span><br>  Machine learning pipeline for analyzing ARPES experimental data<br>  <a href="https://github.com/example/deeparpes" target="_blank">→ View on GitHub</a></div>`;
+                }
+            },
+            contact: {
+                description: 'Display contact information',
+                execute: () => {
+                    return `Email:    <a href="mailto:ericsun@seas.upenn.edu" target="_blank">ericsun@seas.upenn.edu</a><br>GitHub:   <a href="https://github.com/therealericsun" target="_blank">https://github.com/therealericsun</a><br>LinkedIn: <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank">https://www.linkedin.com/in/eric-sun-a323461a0/</a>`;
+                }
+            },
+            experience: {
+                description: 'Show work experience',
+                execute: () => {
+                    return `<div class="panel-box"><span class="section-heading">University of Pennsylvania · Rappe Group Researcher</span><br><span class="tab-hint">Nov 2023 - Present · Philadelphia, PA</span><br>Pseudopotential theory under professor Andrew M. Rappe, development of new numeric solvers for computational physics problems.</div><div class="panel-box"><span class="section-heading">Amazon Web Services (AWS) · Software Engineer Intern</span><br><span class="tab-hint">May 2025 - Aug 2025 · San Francisco, CA</span><br>Generative ML models for science at the Caltech and AWS center for quantum computing.</div><div class="panel-box"><span class="section-heading">Stanford University · Virtual Reality and Visual Computing Group Researcher</span><br><span class="tab-hint">Jan 2022 - Mar 2023 · Stanford, CA</span><br>Neural radiance fields (NeRFs) development under ShanghaiTech University professor Jingyi Yu and Stanford PhD candidate Kevin Fry.</div><div class="panel-box"><span class="section-heading">Yale University · BCT326 Group Researcher</span><br><span class="tab-hint">Mar 2022 - Sep 2022 · New Haven, CT</span><br>Automated the processing of spectroscopy data with convolutional autoencoders. Also was a guest instructor for the Pathways to Science summer program.</div>`;
+                }
+            },
+            clear: {
+                description: 'Clear terminal screen',
+                execute: () => {
+                    const initialContent = document.getElementById('initial-content');
+                    if (initialContent) {
+                        output.innerHTML = initialContent.outerHTML;
+                    }
+                    return null;
+                }
+            },
+            ascii: {
+                description: 'Display ASCII art',
+                execute: () => {
+                    return `
+<pre class="ascii-art">
+ ______     ______     __     ______        ______     __  __     __   __    
+/\  ___\   /\  == \   /\ \   /\  ___\      /\  ___\   /\ \/\ \   /\ "-.\ \   
+\ \  __\   \ \  __<   \ \ \  \ \ \____     \ \___  \  \ \ \_\ \  \ \ \-.  \  
+ \ \_____\  \ \_\ \_\  \ \_\  \ \_____\     \/\_____\  \ \_____\  \ \_\\"\_\ 
+  \/_____/   \/_/ /_/   \/_/   \/_____/      \/_____/   \/_____/   \/_/ \/_/    
+</pre>
+<span class="tab-hint">Cool ASCII art! Type 'help' for more commands.</span>
+`;
+                }
+            },
+        };
+
+        async function executeCommand(cmd) {
+            const trimmedCmd = cmd.trim().toLowerCase();
+            
+            if (trimmedCmd === '') return;
+
+            // Remove autocomplete hint if present
+            removeAutocomplete();
+
+            // Add command to history
+            commandHistory.unshift(cmd);
+            historyIndex = -1;
+
+            // Display command with colored prompt (command in white text)
+            const commandLine = document.createElement('div');
+            commandLine.className = 'output-line';
+            const promptSpan = document.createElement('span');
+            promptSpan.className = 'prompt';
+            promptSpan.textContent = 'visitor@portfolio:~$';
+            promptSpan.style.marginRight = '8px';
+            commandLine.appendChild(promptSpan);
+            commandLine.appendChild(document.createTextNode(cmd));
+            output.appendChild(commandLine);
+
+            // Execute command
+            if (commands[trimmedCmd]) {
+                const result = await commands[trimmedCmd].execute();
+                if (result !== null) {
+                    addOutput(result);
+                }
+            } else {
+                addOutput(`<span class="error">Command not found: ${cmd}</span>`);
+            }
+            
+            // Scroll to bottom
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function addOutput(text) {
+            const line = document.createElement('div');
+            line.className = 'output-line';
+            line.innerHTML = text;
+            output.appendChild(line);
+            
+            // Scroll to bottom
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function removeAutocomplete() {
+            if (autocompleteElement) {
+                autocompleteElement.remove();
+                autocompleteElement = null;
+            }
+        }
+
+        function showAutocomplete(matches) {
+            removeAutocomplete();
+            
+            autocompleteElement = document.createElement('div');
+            autocompleteElement.className = 'autocomplete-hint';
+            autocompleteElement.textContent = matches.join('  ');
+            
+            const inputLine = document.querySelector('.input-line');
+            inputLine.insertAdjacentElement('afterend', autocompleteElement);
+        }
+
+        // Handle input
+        input.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const cmd = input.value;
+                input.value = '';
+                await executeCommand(cmd);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                removeAutocomplete();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    input.value = commandHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                removeAutocomplete();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    input.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = -1;
+                    input.value = '';
+                }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                const partial = input.value.toLowerCase();
+                const matches = Object.keys(commands).filter(cmd => cmd.startsWith(partial));
+                if (matches.length === 1) {
+                    input.value = matches[0];
+                    removeAutocomplete();
+                } else if (matches.length > 1) {
+                    showAutocomplete(matches);
+                }
+            } else {
+                // Remove autocomplete on any other key
+                removeAutocomplete();
+            }
+        });
+
+        // Keep focus on input (but allow text selection)
+        document.addEventListener('click', (e) => {
+            // Only focus input if user isn't selecting text
+            const selection = window.getSelection();
+            if (!selection || selection.toString().length === 0) {
+                input.focus();
+            }
+        });
+        
+        // Initial focus
+        input.focus();
+    </script>
+</body>
+</html>
