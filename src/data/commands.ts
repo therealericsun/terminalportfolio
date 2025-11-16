@@ -20,13 +20,13 @@ export const commands: Record<string, Command> = {
         description: 'List technical skills',
         execute: () => {
             return `<div class="panel-box"><span class="section-heading">Languages:</span> ` +
-                `Python, C++, C, Javascript / Typescript, SQL</div>` +
+                `Python, C++, C, Javascript / Typescript, FORTRAN, LaTeX, HTML, SQL</div>` +
                 `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
                 `PyTorch, TensorFlow, Scikit-learn, Pandas, Polars, OpenCV, NumPy, SciPy, Sphinx, Matplotlib, ` +
                 `Selenium, FastAPI, FastMCP, SQLalchemy, Prefect, MyPy, Ruff, Pydantic, Pybind11, ` +
                 `Astro, Express, React</div>` +
                 `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
-                `Git, Docker, PostgreSQL, Slurm, Jupyter, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
+                `Git, Docker, PostgreSQL, MySQL, Slurm, Jupyter, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
                 `Aurora, Neptune)</div>`;
         }
     },
@@ -38,6 +38,10 @@ export const commands: Record<string, Command> = {
                 `<a href="https://github.com/therealericsun/TerminalPortfolio" target="_blank">→ View on GitHub</a></div>` +
                 `<div class="panel-box"><span class="section-heading">FLASH: An Extremely Fast Self-Consistent Field Solver</span><br>` +
                 `High-performance solver for the radial Schrödinger and Dirac equations written in C++ with Python bindings. (Coming Soon!)</div>` +
+                `<div class="panel-box"><span class="section-heading">OPIUM: Open Source Pseudopotential Generator</span><br>` +
+                `Primary developer (2023-2025) of one of the most widely used computational chemistry tools. Generates norm-conserving pseudopotentials using FORTRAN, only code in the world that support generating pseudopotentials for hybrid and range-seporated hybrid functionals.<br>` +
+                `<a href="https://github.com/rappegroup/opium" target="_blank">→ View Github Fork</a><br>` +
+                `<a href="https://opium-psp.readthedocs.io/en/latest/" target="_blank">→ Project Website</a></div></div>` +
                 `<div class="panel-box"><span class="section-heading">DeepARPES: Convolutional Autoencoders for Photoemission Spectroscopy</span><br>` +
                 `Machine learning pipeline for unsupervised analysis of experimental Angle-Resolved Photoemission Spetroscopy (ARPES) data, trained on tight-binding models. Built in Python with Tensorflow.<br>` +
                 `<a href="https://github.com/therealericsun/deeparpes" target="_blank">→ View on GitHub</a></div>`;
