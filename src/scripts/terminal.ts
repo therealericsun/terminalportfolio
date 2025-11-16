@@ -122,3 +122,33 @@ document.addEventListener('click', (e) => {
 
 // Initial focus
 input?.focus();
+
+// Theme switching functionality
+const lightModeBtn = document.getElementById('light-mode');
+const darkModeBtn = document.getElementById('dark-mode');
+
+function setTheme(theme: 'light' | 'dark') {
+    const root = document.documentElement;
+    
+    if (theme === 'light') {
+        root.classList.add('light-mode');
+        lightModeBtn?.classList.add('active');
+        darkModeBtn?.classList.remove('active');
+        localStorage.setItem('theme', 'light');
+    } else {
+        root.classList.remove('light-mode');
+        darkModeBtn?.classList.add('active');
+        lightModeBtn?.classList.remove('active');
+        localStorage.setItem('theme', 'dark');
+    }
+}
+
+// Load saved theme or default to dark
+const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+if (savedTheme === 'light') {
+    setTheme('light');
+}
+
+// Theme switch event listeners
+lightModeBtn?.addEventListener('click', () => setTheme('light'));
+darkModeBtn?.addEventListener('click', () => setTheme('dark'));

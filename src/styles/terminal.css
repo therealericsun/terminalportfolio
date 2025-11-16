@@ -5,7 +5,7 @@
 }
 
 :root {
-    --bg-color: #272932;
+    --bg-color: #21232c;
     --text-color: #E7ECEF;
     --secondary-color: #4EB3B5;
     --prompt-color: #D8A47F;
@@ -13,6 +13,17 @@
     --highlight-color: #D8A47F;
     --link-color: #F4A6A3;
     --link-hover-color: #E57373;
+}
+
+:root.light-mode {
+    --bg-color: #eae4e4;
+    --text-color: #2C2C2C;
+    --secondary-color: #2A7F81;
+    --prompt-color: #8B5A3C;
+    --error-color: #C62828;
+    --highlight-color: #8B5A3C;
+    --link-color: #C62828;
+    --link-hover-color: #8B0000;
 }
 
 body {
@@ -195,4 +206,35 @@ span.tab-hint {
 .intro-text {
     max-width: 800px;
     line-height: 1.4;
+}
+
+.theme-switch {
+    position: fixed;
+    top: 20px;
+    right: 40px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 16px;
+    z-index: 1000;
+}
+
+.theme-option {
+    color: var(--text-color);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-option:hover {
+    opacity: 0.8;
+}
+
+.theme-option.active {
+    opacity: 1;
+    text-decoration: underline;
+    color: var(--secondary-color);
+}
+
+.theme-separator {
+    color: var(--text-color);
+    opacity: 0.5;
 }
