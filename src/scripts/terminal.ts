@@ -9,14 +9,8 @@ let autocompleteElement: HTMLElement | null = null;
 async function executeCommand(cmd: string) {
     const trimmedCmd = cmd.trim().toLowerCase();
     
-    if (trimmedCmd === '') return;
-
     // Remove autocomplete hint if present
     removeAutocomplete();
-
-    // Add command to history
-    commandHistory.unshift(cmd);
-    historyIndex = -1;
 
     // Display command with colored prompt (command in white text)
     const commandLine = document.createElement('div');
@@ -29,14 +23,21 @@ async function executeCommand(cmd: string) {
     commandLine.appendChild(document.createTextNode(cmd));
     output?.appendChild(commandLine);
 
-    // Execute command
-    if (commands[trimmedCmd]) {
-        const result = await commands[trimmedCmd].execute();
-        if (result !== null) {
-            addOutput(result);
+    // Only execute command if not empty
+    if (trimmedCmd !== '') {
+        // Add command to history
+        commandHistory.unshift(cmd);
+        historyIndex = -1;
+
+        // Execute command
+        if (commands[trimmedCmd]) {
+            const result = await commands[trimmedCmd].execute();
+            if (result !== null) {
+                addOutput(result);
+            }
+        } else {
+            addOutput(`<span class="error">Command not found: ${cmd}</span>`);
         }
-    } else {
-        addOutput(`<span class="error">Command not found: ${cmd}</span>`);
     }
     
     // Scroll to bottom
