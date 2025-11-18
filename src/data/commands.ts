@@ -27,14 +27,14 @@ export const commands: Record<string, Command> = {
     skills: {
         description: 'List technical skills',
         execute: () => {
-            return `<div class="panel-box"><span class="section-heading">Languages:</span> ` +
-                `Python, C++, C, Javascript / Typescript, FORTRAN, LaTeX, HTML, SQL</div>` +
+            return `<div class="panel-box"><span class="section-heading">Programming & Markup Languages:</span> ` +
+                `Python, C++, C, Javascript / Typescript, FORTRAN, LaTeX, HTML, CSS, SQL</div>` +
                 `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
                 `PyTorch, TensorFlow, Scikit-learn, Pandas, Polars, OpenCV, NumPy, SciPy, Sphinx, Matplotlib, ` +
                 `Selenium, FastAPI, FastMCP, SQLalchemy, Prefect, MyPy, Ruff, Pydantic, Pybind11, ` +
                 `Astro, Express, React</div>` +
                 `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
-                `Git, Docker, PostgreSQL, MySQL, Slurm, Jupyter, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
+                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, GitHub Actions, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
                 `Aurora, Neptune)</div>`;
         }
     },

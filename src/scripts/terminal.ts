@@ -1,5 +1,7 @@
 import { commands } from '../data/commands';
-import { parseCommand } from '../utils/commandParser';
+import { parseCommand, parsePipedCommand } from '../utils/commandParser';
+import { getFortune } from '../utils/fortune';
+import { cowsay } from '../utils/cowsay';
 
 const output = document.getElementById('output');
 const input = document.getElementById('command-input') as HTMLInputElement;
@@ -29,17 +31,34 @@ async function executeCommand(cmd: string) {
         commandHistory.unshift(cmd);
         historyIndex = -1;
 
-        // Parse command
-        const parsed = parseCommand(trimmedCmd);
+        // Parse command to check for pipes
+        const pipedResult = parsePipedCommand(trimmedCmd);
 
-        // Execute command
-        if (commands[parsed.command]) {
-            const result = await commands[parsed.command].execute(parsed);
-            if (result !== null) {
-                addOutput(result);
+        if (pipedResult.isPiped) {
+            // Handle piped commands
+            if (pipedResult.commands.length === 2 && 
+                pipedResult.commands[0].command === 'fortune' && 
+                pipedResult.commands[1].command === 'cowsay') {
+                // Execute fortune | cowsay
+                const fortuneText = getFortune();
+                const cowsayOutput = cowsay(fortuneText);
+                addOutput(`<pre style="font-family: inherit; font-size: 16px; line-height: 1.2; white-space: pre; margin: 5px 0;">${cowsayOutput}</pre>`);
+            } else {
+                // Unsupported pipe
+                addOutput(`<span class="error">Error: Piping is currently only supported between fortune and cowsay (usage: fortune | cowsay)</span>`);
             }
         } else {
-            addOutput(`<span class="error">Command not found: ${parsed.command}</span>`);
+            // Execute single command normally
+            const parsed = pipedResult.commands[0];
+            
+            if (commands[parsed.command]) {
+                const result = await commands[parsed.command].execute(parsed);
+                if (result !== null) {
+                    addOutput(result);
+                }
+            } else {
+                addOutput(`<span class="error">Command not found: ${parsed.command}</span>`);
+            }
         }
     }
     

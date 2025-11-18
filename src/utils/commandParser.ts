@@ -6,6 +6,11 @@ export interface ParsedCommand {
     flags: Record<string, string | boolean>;
 }
 
+export interface PipedCommands {
+    isPiped: boolean;
+    commands: ParsedCommand[];
+}
+
 export function parseCommand(input: string): ParsedCommand {
     const trimmed = input.trim();
     const parts = trimmed.split(/\s+/);
@@ -34,4 +39,25 @@ export function parseCommand(input: string): ParsedCommand {
     }
     
     return { command, args, flags };
+}
+
+export function parsePipedCommand(input: string): PipedCommands {
+    const trimmed = input.trim();
+    
+    // Check if command contains pipe
+    if (!trimmed.includes('|')) {
+        return {
+            isPiped: false,
+            commands: [parseCommand(trimmed)]
+        };
+    }
+    
+    // Split by pipe and parse each command
+    const commandStrings = trimmed.split('|').map(s => s.trim());
+    const parsedCommands = commandStrings.map(cmd => parseCommand(cmd));
+    
+    return {
+        isPiped: true,
+        commands: parsedCommands
+    };
 }
