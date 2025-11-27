@@ -53,11 +53,13 @@ export const commands: Record<string, Command> = {
   `<div class="help-item"><span class="command">ls</span><span class="help-dash">-</span><span class="help-desc">List available files</span></div>` +
   `<div class="help-item"><span class="command">cat</span><span class="help-dash">-</span><span class="help-desc">Display file contents (usage: cat [file])</span></div>` +
   `<div class="help-item"><span class="command">echo</span><span class="help-dash">-</span><span class="help-desc">Print text to output (usage: echo [text])</span></div>` +
+  `<div class="help-item"><span class="command">pwd</span><span class="help-dash">-</span><span class="help-desc">Print working directory</span></div>` +
   `<div class="help-item"><span class="command">bonsai</span><span class="help-dash">-</span><span class="help-desc">Generate an ASCII bonsai inspired by cbonsai (-s to set seed) [<a href="https://github.com/mhzawadi/homebrew-cbonsai" target="_blank">info</a>]</span></div>` +
   `<div class="help-item"><span class="command">fortune</span><span class="help-dash">-</span><span class="help-desc">Display a random programming quote [<a href="https://en.wikipedia.org/wiki/Fortune_(Unix)" target="_blank">info</a>]</span></div>` +
   `<div class="help-item"><span class="command">cowsay</span><span class="help-dash">-</span><span class="help-desc">Make a cow say something (usage: cowsay [message]) [<a href="https://en.wikipedia.org/wiki/Cowsay" target="_blank">info</a>]</span></div>` +
   `<div class="help-item"><span class="command">clear</span><span class="help-dash">-</span><span class="help-desc">Clear the terminal</span></div>` +
-  `<div class="help-item"><span class="command">help</span><span class="help-dash">-</span><span class="help-desc">Display this help message</span></div></div>`;
+  `<div class="help-item"><span class="command">help</span><span class="help-dash">-</span><span class="help-desc">Display this help message</span></div></div>` +
+  `<div style="margin-top: 5px; margin-bottom: 10px;"><span class="tab-hint">Tip: Chain commands with | (pipe), && (and), || (or), and ; (sequence). For example, skills | cowsay.</span></div>`;
         }
     },
     skills: {
@@ -275,6 +277,12 @@ export const commands: Record<string, Command> = {
             // Split by newlines and wrap each line separately
             const lines = text.split('\n');
             return lines.join('\n');
+        }
+    },
+    pwd: {
+        description: 'Print working directory',
+        execute: () => {
+            return '/home/portfolio';
         }
     },
 };

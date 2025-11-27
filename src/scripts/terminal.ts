@@ -91,6 +91,13 @@ async function executeCommandChain(chains: Array<{ command: ParsedCommand; opera
             }
         } else {
             // For non-piped commands (first command, or after ;, &&, ||)
+            
+            // Check if bonsai is being piped - it doesn't support piping
+            if (parsed.command === 'bonsai' && willBePiped) {
+                addOutput(`<span class="error">Error: 'bonsai' does not support piping</span>`);
+                return;
+            }
+            
             const result = await executeSingleCommand(parsed);
             previousOutput = result;
             
