@@ -66,13 +66,13 @@ export const commands: Record<string, Command> = {
         description: 'List technical skills',
         execute: () => {
             return `<div class="panel-box"><span class="section-heading">Programming & Markup Languages:</span> ` +
-                `Python, C++, C, Javascript / Typescript, FORTRAN, LaTeX, HTML, CSS, SQL</div>` +
+                `Python, C, C++, Javascript / Typescript, FORTRAN, LaTeX, HTML, CSS, SQL</div>` +
                 `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
                 `PyTorch, TensorFlow, Scikit-learn, Pandas, Polars, OpenCV, NumPy, SciPy, Sphinx, Matplotlib, ` +
                 `Selenium, FastAPI, FastMCP, SQLalchemy, Prefect, MyPy, Ruff, Pydantic, Pybind11, ` +
                 `Astro, Express, React</div>` +
                 `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
-                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, GitHub Actions, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
+                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, gRPC, GitHub Actions, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
                 `Aurora, Neptune)</div>`;
         }
     },
@@ -83,7 +83,8 @@ export const commands: Record<string, Command> = {
                 `A minimalistic and fully interactive terminal-style portfolio website built with Typescript, Astro, and vanilla CSS. You're looking at it right now.<br>` +
                 `<a href="https://github.com/therealericsun/TerminalPortfolio" target="_blank">→ View on GitHub</a></div>` +
                 `<div class="panel-box"><span class="section-heading">FLASH: An Extremely Fast Self-Consistent Field Solver</span><br>` +
-                `High-performance solver for the radial Schrödinger and Dirac equations written in C++ with Python bindings. (Coming Soon!)</div>` +
+                `High-performance solver for the radial Schrödinger and Dirac equations written in C++, solving the Kohn-Sham equations with the self-consistent field method.<br>` +
+                `<a href="https://github.com/therealericsun/FLASH" target="_blank">→ View on GitHub</a></div>` + 
                 `<div class="panel-box"><span class="section-heading">OPIUM: Open Source Pseudopotential Generator</span><br>` +
                 `Primary developer (2023-2025) of one of the most widely used computational chemistry tools. Generates norm-conserving pseudopotentials using FORTRAN, only code in the world that supports generating pseudopotentials for hybrid and range-separated hybrid functionals.<br>` +
                 `<a href="https://github.com/rappegroup/opium" target="_blank">→ View Github fork</a><br>` +
@@ -105,8 +106,11 @@ export const commands: Record<string, Command> = {
     experience: {
         description: 'Show work experience',
         execute: () => {
-            return `<div class="panel-box"><span class="section-heading">University of Pennsylvania · Rappe Group Researcher</span><br>` +
-                `<span class="tab-hint">Nov 2023 - Present · Philadelphia, PA</span><br>` +
+            return `<div class="panel-box"><span class="section-heading">Citadel · Quantitative Developer Intern</span><br>` +
+                `<span class="tab-hint">Jun 2026 - Aug 2026 · Location TBD</span><br>` +
+                `Worked on the Commodities team at Citadel Energy Marketing (CEM), focusing on systems for physical natural gas markets.</div>` +
+                `<div class="panel-box"><span class="section-heading">University of Pennsylvania · Rappe Group Researcher</span><br>` +
+                `<span class="tab-hint">Nov 2023 - Jan 2026 · Philadelphia, PA</span><br>` +
                 `Pseudopotential theory under professor Andrew M. Rappe, development of new numeric solvers for computational physics problems.</div>` +
                 `<div class="panel-box"><span class="section-heading">Amazon Web Services (AWS) · Software Engineer Intern</span><br>` +
                 `<span class="tab-hint">May 2025 - Aug 2025 · San Francisco, CA</span><br>` +
