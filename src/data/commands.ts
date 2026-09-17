@@ -66,13 +66,13 @@ export const commands: Record<string, Command> = {
         description: 'List technical skills',
         execute: () => {
             return `<div class="panel-box"><span class="section-heading">Programming & Markup Languages:</span> ` +
-                `Python, C, C++, Javascript / Typescript, FORTRAN, LaTeX, HTML, CSS, SQL</div>` +
+                `Python, C, C++, Java, Javascript / Typescript, FORTRAN, Bash, Zsh, LaTeX, HTML, CSS, SQL, GraphQL</div>` +
                 `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
-                `PyTorch, TensorFlow, Scikit-learn, Pandas, Polars, OpenCV, NumPy, SciPy, Sphinx, Matplotlib, ` +
-                `Selenium, FastAPI, FastMCP, SQLalchemy, Prefect, MyPy, Ruff, Pydantic, Pybind11, ` +
-                `Astro, Express, React</div>` +
+                `PyTorch, TensorFlow, Keras, Scikit-learn, Pandas, Polars, NetworkX, OpenCV, NumPy, SciPy, CUDA, Sphinx, Matplotlib, Plotly, ` +
+                `Selenium, FastAPI, FastMCP, SQLAlchemy, Prefect, Celery, MyPy, Ruff, Pydantic, ChromaDB, Pybind11, Numba, LibXC, LangChain, ` +
+                `Astro, Express, React, AG Grid</div>` +
                 `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
-                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, gRPC, GitHub Actions, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
+                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, gRPC, CI/CD, GitHub Actions, Gemini API, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
                 `Aurora, Neptune)</div>`;
         }
     },
@@ -107,7 +107,7 @@ export const commands: Record<string, Command> = {
         description: 'Show work experience',
         execute: () => {
             return `<div class="panel-box"><span class="section-heading">Citadel · Quantitative Developer Intern</span><br>` +
-                `<span class="tab-hint">Jun 2026 - Aug 2026 · Location TBD</span><br>` +
+                `<span class="tab-hint">Jun 2026 - Aug 2026 · New York Metropolitan Area</span><br>` +
                 `Worked on the Commodities team at Citadel Energy Marketing (CEM), focusing on systems for physical natural gas markets.</div>` +
                 `<div class="panel-box"><span class="section-heading">University of Pennsylvania · Rappe Group Researcher</span><br>` +
                 `<span class="tab-hint">Nov 2023 - Jan 2026 · Philadelphia, PA</span><br>` +

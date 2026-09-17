@@ -25,3 +25,16 @@ npm run dev
 ```
 
 Visit `localhost:4321` to view the site locally.
+
+# Production build
+
+```sh
+npm run build
+npm run preview
+```
+
+The build writes the static site to `dist/`.
+
+Run `npm install` before using the npm scripts. They invoke this project's local
+Astro executable explicitly because the unrelated Astronomer CLI also uses the
+command name `astro`. For other Astro commands, use `npm run astro -- <command>`.
