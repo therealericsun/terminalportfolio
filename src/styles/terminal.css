@@ -55,8 +55,9 @@ body {
     font-family: 'IBM Plex Mono', Consolas, Monaco, monospace;
     font-size: 16px;
     line-height: 1.6;
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
     margin: 0;
     isolation: isolate;
 }
@@ -68,12 +69,7 @@ body {
     height: 100%;
     z-index: -1;
     pointer-events: none;
-    opacity: 0.24;
-    transition: opacity 180ms ease;
-}
-
-body:has(#command-input:focus, .life-controls:focus-within) #life-canvas {
-    opacity: 0.14;
+    opacity: 0.1;
 }
 
 #life-canvas:focus-visible {
@@ -101,8 +97,7 @@ body:has(#command-input:focus, .life-controls:focus-within) #life-canvas {
     padding: 0 0 15px;
     padding-left: 60px;
     padding-right: 60px;
-    height: calc(100dvh - 150px);
-    overflow: hidden;
+    min-height: calc(100dvh - 125px);
 }
 
 #initial-content {
@@ -114,13 +109,9 @@ body:has(#command-input:focus, .life-controls:focus-within) #life-canvas {
 }
 
 .terminal-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: #505963 transparent;
+    flex: none;
+    min-height: auto;
+    overflow: visible;
 }
 
 /* Keep space for command history when the viewport is short. */
@@ -128,7 +119,7 @@ body:has(#command-input:focus, .life-controls:focus-within) #life-canvas {
     .terminal-container {
         margin-top: 75px;
         margin-bottom: 45px;
-        height: calc(100dvh - 120px);
+        min-height: calc(100dvh - 120px);
     }
 
     #initial-content {
@@ -260,12 +251,34 @@ a:hover {
     text-decoration: underline;
 }
 
+.ascii-name {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 2ch;
+    width: max-content;
+    padding-bottom: 6px;
+}
+
 .ascii-art {
     color: var(--secondary-color);
     line-height: 1.2;
     margin: 10px 0;
     white-space: pre;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    width: max-content;
+}
+
+.ascii-letter {
     display: inline-block;
+    transition: color 100ms ease, transform 100ms ease, text-shadow 100ms ease;
+}
+
+.ascii-letter:hover {
+    color: #78d7d9;
+    transform: translateY(-4px);
+    text-shadow: 0 0 5px rgba(120, 215, 217, 0.35);
 }
 
 .skill-item {
@@ -325,7 +338,7 @@ span.tab-hint {
     padding: 15px;
     margin-top: 15px;
     margin-bottom: 15px;
-    background-color: rgba(231, 236, 239, 0.03);
+    background-color: rgba(231, 236, 239, 0.07);
     border-radius: 2px;
     max-width: 900px;
     line-height: 1.4;
@@ -390,7 +403,7 @@ span.tab-hint {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #life-canvas {
+    .ascii-letter {
         transition: none;
     }
 }
@@ -410,11 +423,16 @@ span.tab-hint {
 @media (max-width: 768px) {
     .terminal-container {
         margin: 90px auto 45px;
-        height: calc(100dvh - 135px);
+        min-height: calc(100dvh - 135px);
         padding-top: 0;
         padding-bottom: 10px;
         padding-left: 15px;
         padding-right: 15px;
+    }
+
+    .ascii-name {
+        flex-direction: column;
+        gap: 0;
     }
 
     /* Make ASCII art smaller on mobile but still readable */
@@ -422,7 +440,7 @@ span.tab-hint {
         font-size: 10px;
         line-height: 1.1;
         margin: 5px 0;
-        display: block;
+        display: flex;
     }
 
     /* Display ASCII art pieces with some spacing */

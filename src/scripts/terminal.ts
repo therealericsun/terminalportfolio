@@ -6,11 +6,14 @@ import type { ParsedCommand } from '../utils/commandParser';
 const fileNames = ['skills.md', 'projects.md', 'experience.md', 'contact.md'];
 
 const output = document.getElementById('output');
-const terminal = document.querySelector<HTMLElement>('.terminal-scroll');
 const input = document.getElementById('command-input') as HTMLInputElement;
 const commandHistory: string[] = [];
 let historyIndex = -1;
 let autocompleteElement: HTMLElement | null = null;
+
+function scrollPromptIntoView() {
+    input?.scrollIntoView({ block: 'end' });
+}
 
 async function executeCommand(cmd: string) {
     const trimmedCmd = cmd.trim();
@@ -37,7 +40,7 @@ async function executeCommand(cmd: string) {
         // Check for redirection operators (>, >>, <)
         if (/[<>]/.test(trimmedCmd)) {
             addOutput(getRestrictedCommandError('redirection'));
-            terminal?.scrollTo(0, terminal.scrollHeight);
+            scrollPromptIntoView();
             return;
         }
 
@@ -49,7 +52,7 @@ async function executeCommand(cmd: string) {
     }
     
     // Scroll to bottom
-    terminal?.scrollTo(0, terminal.scrollHeight);
+    scrollPromptIntoView();
 }
 
 async function executeCommandChain(chains: Array<{ command: ParsedCommand; operator?: string }>) {
@@ -212,7 +215,7 @@ function addOutput(text: string) {
     output?.appendChild(line);
     
     // Scroll to bottom
-    terminal?.scrollTo(0, terminal.scrollHeight);
+    scrollPromptIntoView();
 }
 
 function removeAutocomplete() {
