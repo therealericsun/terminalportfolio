@@ -6,7 +6,7 @@ import type { ParsedCommand } from '../utils/commandParser';
 const fileNames = ['skills.md', 'projects.md', 'experience.md', 'contact.md'];
 
 const output = document.getElementById('output');
-const terminal = document.querySelector<HTMLElement>('.terminal-container');
+const terminal = document.querySelector<HTMLElement>('.terminal-scroll');
 const input = document.getElementById('command-input') as HTMLInputElement;
 const commandHistory: string[] = [];
 let historyIndex = -1;

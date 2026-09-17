@@ -5,7 +5,7 @@ const context = canvas?.getContext('2d');
 const controls = document.querySelector<HTMLElement>('.life-controls');
 
 if (canvas && context && controls) {
-    const cellSize = window.innerWidth < 600 ? 8 : 12;
+    const cellSize = window.innerWidth < 360 ? 6 : window.innerWidth < 600 ? 8 : 12;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const speedButtons = controls.querySelectorAll<HTMLButtonElement>('[data-life-speed]');
     let speed = reducedMotion.matches ? 0 : 1;
@@ -113,6 +113,13 @@ if (canvas && context && controls) {
         draw();
     });
 
+    controls.querySelector<HTMLButtonElement>('#life-reset')?.addEventListener('click', () => {
+        board = new LifeBoard(board.columns, board.rows);
+        seedLife(board);
+        hovered = null;
+        draw();
+        schedule();
+    });
     speedButtons.forEach((button) => {
         button.addEventListener('click', () => setSpeed(Number(button.dataset.lifeSpeed)));
     });

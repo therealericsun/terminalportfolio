@@ -72,7 +72,7 @@ body {
     transition: opacity 180ms ease;
 }
 
-body:has(#command-input:focus) #life-canvas {
+body:has(#command-input:focus, .life-controls:focus-within) #life-canvas {
     opacity: 0.14;
 }
 
@@ -94,17 +94,57 @@ body:has(#command-input:focus) #life-canvas {
 }
 
 .terminal-container {
+    display: flex;
+    flex-direction: column;
     max-width: 1400px;
-    margin: 85px auto 65px;
+    margin: 60px auto 65px;
     padding: 0 0 15px;
-    padding-left: 100px;
+    padding-left: 60px;
     padding-right: 60px;
     height: calc(100dvh - 150px);
+    overflow: hidden;
+}
+
+#initial-content {
+    flex: none;
+}
+
+.intro-spacer {
+    height: 15px;
+}
+
+.terminal-scroll {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: #505963 transparent;
+}
+
+/* Keep space for command history when the viewport is short. */
+@media (max-height: 740px) {
+    .terminal-container {
+        margin-top: 75px;
+        margin-bottom: 45px;
+        height: calc(100dvh - 120px);
+    }
+
+    #initial-content {
+        font-size: 12px;
+    }
+
+    #initial-content .ascii-art {
+        font-size: 8px;
+        line-height: 1.05;
+        margin-top: 3px;
+        margin-bottom: 3px;
+    }
+
+    .intro-spacer {
+        height: 6px;
+    }
 }
 
 .output-line {
@@ -313,11 +353,6 @@ span.tab-hint {
     gap: 5px;
     background: var(--bg-color);
     border-radius: 3px;
-}
-
-.life-label {
-    color: var(--secondary-color);
-    margin-right: 9px;
 }
 
 .life-speed button {

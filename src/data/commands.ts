@@ -213,13 +213,7 @@ export const commands: Record<string, Command> = {
     clear: {
         description: 'Clear terminal screen',
         execute: () => {
-            const initialContent = document.getElementById('initial-content');
-            if (initialContent) {
-                const output = document.getElementById('output');
-                if (output) {
-                    output.innerHTML = initialContent.outerHTML;
-                }
-            }
+            document.getElementById('output')?.replaceChildren();
             return null;
         }
     },

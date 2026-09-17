@@ -17,19 +17,18 @@ import '../styles/terminal.css';
     <canvas id="life-canvas" tabindex="0" role="application" aria-label="Conway's Game of Life" aria-describedby="life-keyboard-help"></canvas>
     <span id="life-keyboard-help" class="sr-only">Use arrow keys to choose a cell, Space or Enter to toggle it, and Escape to return to the terminal.</span>
     <div class="life-controls" hidden>
-        <div class="life-speed" role="group" aria-label="Game of Life speed">
-            <span class="life-label" aria-hidden="true">life</span>
+        <div class="life-speed" role="group" aria-label="Game of Life controls">
+            <button type="button" id="life-reset" aria-label="Reset Game of Life">reset</button>
             <button type="button" data-life-speed="0" aria-pressed="false" aria-label="Pause Game of Life">pause</button>
             <button type="button" data-life-speed="0.5" aria-pressed="false" aria-label="Half speed">½×</button>
             <button type="button" data-life-speed="1" aria-pressed="true" aria-label="Normal speed">1×</button>
             <button type="button" data-life-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
             <button type="button" data-life-speed="4" aria-pressed="false" aria-label="Quadruple speed">4×</button>
         </div>
-        <p id="life-pointer-help">click to focus · then click to flip cells</p>
+        <p id="life-pointer-help">click to flip cells · <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life" target="_blank" rel="noopener noreferrer">what is this?</a></p>
     </div>
     <div class="terminal-container">
-        <div id="output">
-            <div id="initial-content">
+        <div id="initial-content">
                <pre class="ascii-art ascii-art-eric">
  ______     ______     __     ______      
 /\  ___\   /\  == \   /\ \   /\  ___\     
@@ -45,15 +44,16 @@ import '../styles/terminal.css';
    \/_____/   \/_____/   \/_/ \/_/   
                 </pre>
                 <div class="output-line"><a href="https://github.com/therealericsun" target="_blank">GitHub</a> | <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank">LinkedIn</a> | <a href="https://scholar.google.com/citations?user=lAt-xWMAAAAJ&hl=en" target="_blank">Google Scholar</a> | <a href="mailto:ericsun@seas.upenn.edu">Email</a> | <a href="/Eric_Sun_Resume.pdf" download>Resume</a></div>
-                <div style="height: 15px;"></div>
-                <div class="output-line intro-text">My name is Eric Sun (he/him). I study Physics and Computer Science at the University of Pennsylvania. My primary interests are in machine learning and high-performance computing, and I dabble in web and cloud development too. Explore this site using the terminal below.</div>
-                <div style="height: 15px;"></div>
+                <div class="intro-spacer"></div>
+                <div class="output-line intro-text">My name is Eric Sun (he/him). I study Physics and Computer Science at the University of Pennsylvania. My primary interests are in machine learning, numeric simulations, and high-performance computing. Explore this site using the terminal below.</div>
+                <div class="intro-spacer"></div>
                 <div class="output-line">Type <span class="command">help</span> to see available commands.</div>
                 <div class="output-line tab-hint">Tip: Use TAB for autocomplete and UP/DOWN to scroll terminal history</div>
                 <div class="output-line separator-line">─────────────────────────────────────────────────────────</div>
-            </div>
         </div>
-        <div class="input-line">
+        <div class="terminal-scroll" role="region" aria-label="Terminal history">
+            <div id="output"></div>
+            <div class="input-line">
             <span class="prompt">visitor@portfolio:~$</span>
             <input 
                 type="text" 
@@ -62,6 +62,7 @@ import '../styles/terminal.css';
                 autocomplete="off" 
                 spellcheck="false" 
             />
+            </div>
         </div>
     </div>
 

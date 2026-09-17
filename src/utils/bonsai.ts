@@ -200,7 +200,7 @@ export async function generateBonsai(seed: number): Promise<void> {
         }
         
         // Keep the growing tree visible inside the terminal.
-        const terminal = document.querySelector<HTMLElement>('.terminal-container');
+        const terminal = document.querySelector<HTMLElement>('.terminal-scroll');
         terminal?.scrollTo({
             top: terminal.scrollHeight,
             behavior: 'smooth'
