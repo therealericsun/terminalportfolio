@@ -65,14 +65,13 @@ export const commands: Record<string, Command> = {
     skills: {
         description: 'List technical skills',
         execute: () => {
-            return `<div class="panel-box"><span class="section-heading">Programming & Markup Languages:</span> ` +
-                `Python, C, C++, Java, Javascript / Typescript, FORTRAN, Bash, Zsh, LaTeX, HTML, CSS, SQL, GraphQL</div>` +
+            return `<div class="panel-box"><span class="section-heading">Languages:</span> ` +
+                `Python, C, C++, FORTRAN, Bash, Zsh, SQL, LaTeX</div>` +
                 `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
-                `PyTorch, TensorFlow, Keras, Scikit-learn, Pandas, Polars, NetworkX, OpenCV, NumPy, SciPy, CUDA, Sphinx, Matplotlib, Plotly, ` +
-                `Selenium, FastAPI, FastMCP, SQLAlchemy, Prefect, Celery, MyPy, Ruff, Pydantic, ChromaDB, Pybind11, Numba, LibXC, LangChain, ` +
-                `Astro, Express, React, AG Grid</div>` +
+                `PyTorch, TensorFlow, Scikit-learn, NumPy, SciPy, Pandas, Polars, Matplotlib, Plotly, ` +
+                `FastAPI, SQLAlchemy, Prefect, Celery, FastMCP, LangChain, Pybind11, Numba</div>` +
                 `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
-                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, gRPC, CI/CD, GitHub Actions, Gemini API, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
+                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, CUDA, GraphQL, gRPC, CI/CD, GitHub Actions, Gemini API, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
                 `Aurora, Neptune)</div>`;
         }
     },
