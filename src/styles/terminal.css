@@ -37,6 +37,7 @@
 }
 
 :root {
+    color-scheme: dark;
     --bg-color: #21232c;
     --text-color: #E7ECEF;
     --secondary-color: #4EB3B5;
@@ -47,34 +48,63 @@
     --link-hover-color: #E57373;
 }
 
-:root.light-mode {
-    --bg-color: #e5d9d9;
-    --text-color: #2C2C2C;
-    --secondary-color: #2A7F81;
-    --prompt-color: #8B5A3C;
-    --error-color: #C62828;
-    --highlight-color: #8B5A3C;
-    --link-color: #C62828;
-    --link-hover-color: #8B0000;
-}
-
 body {
+    display: flow-root;
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: 'IBM Plex Mono', Consolas, Monaco, monospace;
     font-size: 16px;
     line-height: 1.6;
-    min-height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     margin: 0;
+    isolation: isolate;
+}
+
+#life-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.24;
+    transition: opacity 180ms ease;
+}
+
+body:has(#command-input:focus) #life-canvas {
+    opacity: 0.14;
+}
+
+#life-canvas:focus-visible {
+    outline: 1px solid var(--secondary-color);
+    outline-offset: -5px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
 .terminal-container {
     max-width: 1400px;
-    margin: 0 auto;
-    padding: 40px;
+    margin: 85px auto 65px;
+    padding: 0 0 15px;
     padding-left: 100px;
     padding-right: 60px;
-    min-height: 100vh;
+    height: calc(100dvh - 150px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #505963 transparent;
 }
 
 .output-line {
@@ -266,35 +296,68 @@ span.tab-hint {
     line-height: 1.4;
 }
 
-.theme-switch {
+.life-controls {
     position: fixed;
     top: 20px;
     right: 40px;
     font-family: 'IBM Plex Mono', Consolas, Monaco, monospace;
-    font-size: 16px;
+    font-size: 14px;
     z-index: 1000;
+    text-align: right;
 }
 
-.theme-option {
-    color: var(--text-color);
-    opacity: 0.5;
+.life-speed {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    background: var(--bg-color);
+    border-radius: 3px;
+}
+
+.life-label {
+    color: var(--secondary-color);
+    margin-right: 9px;
+}
+
+.life-speed button {
+    font: inherit;
+    color: #a2abb5;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 4px 6px;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
-.theme-option:hover {
-    opacity: 0.8;
-}
-
-.theme-option.active {
-    opacity: 1;
-    text-decoration: underline;
+.life-speed button:hover,
+.life-speed button[aria-pressed='true'] {
     color: var(--secondary-color);
 }
 
-.theme-separator {
-    color: var(--text-color);
-    opacity: 0.5;
+.life-speed button[aria-pressed='true'] {
+    border-bottom-color: currentColor;
+}
+
+.life-speed button:focus-visible {
+    outline: 1px solid var(--secondary-color);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+#life-pointer-help {
+    margin-top: 5px;
+    color: #9aa3af;
+    font-size: 10px;
+    background: var(--bg-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #life-canvas {
+        transition: none;
+    }
 }
 
 .copyright {
@@ -311,7 +374,10 @@ span.tab-hint {
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
     .terminal-container {
-        padding: 20px;
+        margin: 90px auto 45px;
+        height: calc(100dvh - 135px);
+        padding-top: 0;
+        padding-bottom: 10px;
         padding-left: 15px;
         padding-right: 15px;
     }
@@ -350,11 +416,16 @@ span.tab-hint {
         padding: 10px;
     }
 
-    /* Adjust theme switch and copyright for mobile */
-    .theme-switch {
+    /* Keep controls above the terminal and easy to tap. */
+    .life-controls {
         top: 10px;
         right: 15px;
         font-size: 14px;
+    }
+
+    .life-speed button {
+        min-width: 40px;
+        min-height: 40px;
     }
 
     .copyright {

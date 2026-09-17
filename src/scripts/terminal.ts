@@ -6,6 +6,7 @@ import type { ParsedCommand } from '../utils/commandParser';
 const fileNames = ['skills.md', 'projects.md', 'experience.md', 'contact.md'];
 
 const output = document.getElementById('output');
+const terminal = document.querySelector<HTMLElement>('.terminal-container');
 const input = document.getElementById('command-input') as HTMLInputElement;
 const commandHistory: string[] = [];
 let historyIndex = -1;
@@ -36,7 +37,7 @@ async function executeCommand(cmd: string) {
         // Check for redirection operators (>, >>, <)
         if (/[<>]/.test(trimmedCmd)) {
             addOutput(getRestrictedCommandError('redirection'));
-            window.scrollTo(0, document.body.scrollHeight);
+            terminal?.scrollTo(0, terminal.scrollHeight);
             return;
         }
 
@@ -48,7 +49,7 @@ async function executeCommand(cmd: string) {
     }
     
     // Scroll to bottom
-    window.scrollTo(0, document.body.scrollHeight);
+    terminal?.scrollTo(0, terminal.scrollHeight);
 }
 
 async function executeCommandChain(chains: Array<{ command: ParsedCommand; operator?: string }>) {
@@ -211,7 +212,7 @@ function addOutput(text: string) {
     output?.appendChild(line);
     
     // Scroll to bottom
-    window.scrollTo(0, document.body.scrollHeight);
+    terminal?.scrollTo(0, terminal.scrollHeight);
 }
 
 function removeAutocomplete() {
@@ -308,47 +309,35 @@ input?.addEventListener('keydown', async (e: KeyboardEvent) => {
     }
 });
 
-// Keep focus on input (but allow text selection)
-document.addEventListener('click', (e) => {
-    // Only focus input if user isn't selecting text
-    const selection = window.getSelection();
-    if (!selection || selection.toString().length === 0) {
-        input?.focus();
+// A click first focuses the terminal; once it has the caret, clicks edit Life.
+// Capture focus on pointerdown because the browser may blur the input before click.
+const interactiveSelector = 'a, button, input, select, textarea, summary, [contenteditable], [role="button"], .life-controls';
+let clickIntent: { x: number; y: number; focused: boolean; dragged: boolean } | null = null;
+
+document.addEventListener('pointerdown', (event) => {
+    clickIntent = null;
+    if (!event.isPrimary || event.button !== 0 || (event.target as Element).closest(interactiveSelector)) return;
+    clickIntent = { x: event.clientX, y: event.clientY, focused: document.activeElement === input, dragged: false };
+});
+document.addEventListener('pointermove', (event) => {
+    if (clickIntent && Math.hypot(event.clientX - clickIntent.x, event.clientY - clickIntent.y) > 6) {
+        clickIntent.dragged = true;
+    }
+});
+document.addEventListener('pointercancel', () => { clickIntent = null; });
+document.addEventListener('click', (event) => {
+    const intent = clickIntent;
+    clickIntent = null;
+    if (event.defaultPrevented || event.button !== 0 || (event.target as Element).closest(interactiveSelector)) return;
+    if (intent?.dragged || window.getSelection()?.toString() || input?.disabled) return;
+    input?.focus({ preventScroll: true });
+    if (intent?.focused) {
+        document.dispatchEvent(new CustomEvent('life:toggle', { detail: { x: event.clientX, y: event.clientY } }));
     }
 });
 
-// Initial focus
-input?.focus();
-
-// Theme switching functionality
-const lightModeBtn = document.getElementById('light-mode');
-const darkModeBtn = document.getElementById('dark-mode');
-
-function setTheme(theme: 'light' | 'dark') {
-    const root = document.documentElement;
-    
-    if (theme === 'light') {
-        root.classList.add('light-mode');
-        lightModeBtn?.classList.add('active');
-        darkModeBtn?.classList.remove('active');
-        localStorage.setItem('theme', 'light');
-    } else {
-        root.classList.remove('light-mode');
-        darkModeBtn?.classList.add('active');
-        lightModeBtn?.classList.remove('active');
-        localStorage.setItem('theme', 'dark');
-    }
-}
-
-// Load saved theme or default to dark
-const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-if (savedTheme === 'light') {
-    setTheme('light');
-}
-
-// Theme switch event listeners
-lightModeBtn?.addEventListener('click', () => setTheme('light'));
-darkModeBtn?.addEventListener('click', () => setTheme('dark'));
+// Do not open a mobile keyboard before the visitor chooses to type.
+if (window.matchMedia('(pointer: fine)').matches) input?.focus({ preventScroll: true });
 
 // Auto-update copyright year
 const yearElement = document.getElementById('current-year');

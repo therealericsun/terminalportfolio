@@ -6,7 +6,8 @@
     "dev": "node ./node_modules/astro/astro.js dev",
     "build": "node ./node_modules/astro/astro.js build",
     "preview": "node ./node_modules/astro/astro.js preview",
-    "astro": "node ./node_modules/astro/astro.js"
+    "astro": "node ./node_modules/astro/astro.js",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "astro": "^5.18.2"

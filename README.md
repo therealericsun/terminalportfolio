@@ -2,7 +2,15 @@
 
 See the live website on [ericsun.net](https://ericsun.net/).
 
-A simple and lightweight terminal-style portfolio written in Astro, CSS, and Typescript. Supports the visitor typing commands to pull information from the profile, light / dark mode, and is configured to be highly customizable.
+A simple and lightweight terminal-style portfolio written in Astro, CSS, and TypeScript. A dark terminal sits over a faint, interactive Conway's Game of Life background, rendered with Canvas and no extra runtime dependencies.
+
+The simulation stays inside the viewport, while long terminal output scrolls independently.
+Click once to focus the terminal; while its caret is active, ordinary clicks toggle Life cells.
+Links, inputs, speed controls, and text-selection drags retain their normal behavior.
+The top-right control pauses the simulation or selects ½×, 1×, 2×, or 4× speed (1× is eight generations per second).
+Reduced-motion users start paused, and hidden tabs stop animating.
+The Life canvas is keyboard accessible: Tab to it, use arrow keys to select a cell,
+Space or Enter to toggle it, and Escape to return to typing.
 
 Main page:
 
@@ -25,6 +33,9 @@ npm run dev
 ```
 
 Visit `localhost:4321` to view the site locally.
+
+Run `npm test` to check the Life rules, repeating patterns, and board resizing
+(Node.js 22.6+ is required for the test runner's TypeScript support).
 
 # Production build
 

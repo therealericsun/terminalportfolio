@@ -14,10 +14,18 @@ import '../styles/terminal.css';
     <link rel="manifest" href="/site.webmanifest">
 </head>
 <body>
-    <div class="theme-switch">
-        <span id="light-mode" class="theme-option">light</span>
-        <span class="theme-separator"> / </span>
-        <span id="dark-mode" class="theme-option active">dark</span>
+    <canvas id="life-canvas" tabindex="0" role="application" aria-label="Conway's Game of Life" aria-describedby="life-keyboard-help"></canvas>
+    <span id="life-keyboard-help" class="sr-only">Use arrow keys to choose a cell, Space or Enter to toggle it, and Escape to return to the terminal.</span>
+    <div class="life-controls" hidden>
+        <div class="life-speed" role="group" aria-label="Game of Life speed">
+            <span class="life-label" aria-hidden="true">life</span>
+            <button type="button" data-life-speed="0" aria-pressed="false" aria-label="Pause Game of Life">pause</button>
+            <button type="button" data-life-speed="0.5" aria-pressed="false" aria-label="Half speed">½×</button>
+            <button type="button" data-life-speed="1" aria-pressed="true" aria-label="Normal speed">1×</button>
+            <button type="button" data-life-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
+            <button type="button" data-life-speed="4" aria-pressed="false" aria-label="Quadruple speed">4×</button>
+        </div>
+        <p id="life-pointer-help">click to focus · then click to flip cells</p>
     </div>
     <div class="terminal-container">
         <div id="output">
@@ -50,7 +58,7 @@ import '../styles/terminal.css';
             <input 
                 type="text" 
                 id="command-input" 
-                autofocus 
+                aria-label="Terminal command"
                 autocomplete="off" 
                 spellcheck="false" 
             />
@@ -63,6 +71,7 @@ import '../styles/terminal.css';
 
     <script>
         import '../scripts/terminal.ts';
+        import '../scripts/life.ts';
     </script>
 </body>
 </html>

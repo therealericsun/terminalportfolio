@@ -176,23 +176,14 @@ export const commands: Record<string, Command> = {
                 
                 await generateBonsai(seed);
             } finally {
-                // Save current scroll position to prevent jump
-                const scrollY = window.scrollY;
-                
                 // Re-enable input after animation
                 if (input) {
                     input.disabled = false;
                 }
                 if (inputLine) inputLine.style.display = 'flex';
                 
-                // Restore scroll position to prevent jarring jump
-                window.scrollTo({
-                    top: scrollY,
-                    behavior: 'instant'
-                });
-                
-                // Focus input after restoring scroll
-                if (input) input.focus();
+                // Restore typing without scrolling the viewport.
+                if (input) input.focus({ preventScroll: true });
             }
             
             return null;

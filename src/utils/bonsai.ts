@@ -199,9 +199,10 @@ export async function generateBonsai(seed: number): Promise<void> {
             lineDiv.innerHTML = trimmedLine || ' ';
         }
         
-        // Scroll smoothly to keep the growing tree visible
-        window.scrollTo({
-            top: document.body.scrollHeight,
+        // Keep the growing tree visible inside the terminal.
+        const terminal = document.querySelector<HTMLElement>('.terminal-container');
+        terminal?.scrollTo({
+            top: terminal.scrollHeight,
             behavior: 'smooth'
         });
     }
