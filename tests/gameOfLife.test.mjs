@@ -136,7 +136,8 @@ test('seeded formations keep one Quasar, one pulsar, and two toads isolated', ()
         assert.equal(pulsars.length, 1, `one pulsar on a ${columns} × ${rows} board`);
         assert.equal(toads.length, 2, `two toads on a ${columns} × ${rows} board`);
         if (columns >= 105 && rows >= 60) {
-            assert.deepEqual(quasars, [[columns - 47, 21]], 'Quasar uses the upper-right slot');
+            const quasarX = Math.max(2, Math.min(Math.floor(columns * 0.38), columns - 75));
+            assert.deepEqual(quasars, [[quasarX, 3]], 'Quasar uses the upper-left slot');
             assert.deepEqual(pulsars, [[columns - 18, rows - 18]], 'pulsar uses the lower-right slot');
         }
         for (let i = 0; i < 600; i++) board.step();

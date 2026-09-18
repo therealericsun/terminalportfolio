@@ -312,15 +312,14 @@ input?.addEventListener('keydown', async (e: KeyboardEvent) => {
     }
 });
 
-// A click first focuses the terminal; once it has the caret, clicks edit Life.
-// Capture focus on pointerdown because the browser may blur the input before click.
-const interactiveSelector = 'a, button, input, select, textarea, summary, [contenteditable], [role="button"], .background-toolbar, .mnist-card';
-let clickIntent: { x: number; y: number; focused: boolean; dragged: boolean } | null = null;
+// Plain clicks focus the terminal without disrupting links, controls, or text selection.
+const interactiveSelector = 'a, button, input, select, textarea, summary, [contenteditable], [role="button"], .mnist-card';
+let clickIntent: { x: number; y: number; dragged: boolean } | null = null;
 
 document.addEventListener('pointerdown', (event) => {
     clickIntent = null;
     if (!event.isPrimary || event.button !== 0 || (event.target as Element).closest(interactiveSelector)) return;
-    clickIntent = { x: event.clientX, y: event.clientY, focused: document.activeElement === input, dragged: false };
+    clickIntent = { x: event.clientX, y: event.clientY, dragged: false };
 });
 document.addEventListener('pointermove', (event) => {
     if (clickIntent && Math.hypot(event.clientX - clickIntent.x, event.clientY - clickIntent.y) > 6) {
@@ -334,9 +333,6 @@ document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || (event.target as Element).closest(interactiveSelector)) return;
     if (intent?.dragged || window.getSelection()?.toString() || input?.disabled) return;
     input?.focus({ preventScroll: true });
-    if (intent?.focused && document.body.dataset.background === 'life') {
-        document.dispatchEvent(new CustomEvent('life:toggle', { detail: { x: event.clientX, y: event.clientY } }));
-    }
 });
 
 // Do not open a mobile keyboard before the visitor chooses to type.

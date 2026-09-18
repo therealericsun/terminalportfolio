@@ -7,7 +7,8 @@
     "build": "node ./node_modules/astro/astro.js build",
     "preview": "node ./node_modules/astro/astro.js preview",
     "astro": "node ./node_modules/astro/astro.js",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "train:mnist": "python3 scripts/train_mnist.py"
   },
   "dependencies": {
     "astro": "^5.18.2"

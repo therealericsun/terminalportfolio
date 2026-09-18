@@ -1,81 +1,91 @@
-type BackgroundMode = 'life' | 'neural';
-
 const neuralBackground = document.querySelector<HTMLElement>('#neural-background');
 const diagram = document.querySelector<HTMLElement>('#network-diagram');
 const samples = document.querySelector<HTMLElement>('.mnist-samples');
 const inputTarget = document.querySelector<HTMLElement>('#neural-input');
-const inputCanvas = inputTarget?.querySelector<HTMLCanvasElement>('canvas');
-const status = document.querySelector<HTMLElement>('#network-status');
 const links = document.querySelector<SVGSVGElement>('.neural-links');
-const lifeControls = document.querySelector<HTMLElement>('.life-controls');
-const neuralControls = document.querySelector<HTMLElement>('.neural-controls');
-const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-background-mode]');
 
-const digitPaths: Record<number, number[][][]> = {
-    0: [[[0.34, 0.12], [0.64, 0.09], [0.79, 0.27], [0.78, 0.67], [0.63, 0.88], [0.34, 0.87], [0.19, 0.68], [0.2, 0.3], [0.34, 0.12]]],
-    1: [[[0.34, 0.28], [0.52, 0.11], [0.53, 0.88]], [[0.36, 0.87], [0.7, 0.87]]],
-    2: [[[0.2, 0.27], [0.35, 0.1], [0.65, 0.12], [0.78, 0.3], [0.67, 0.48], [0.22, 0.87], [0.8, 0.86]]],
-    3: [[[0.2, 0.2], [0.43, 0.1], [0.7, 0.16], [0.74, 0.34], [0.57, 0.47], [0.75, 0.59], [0.69, 0.8], [0.43, 0.9], [0.19, 0.79]]],
-    4: [[[0.68, 0.9], [0.65, 0.1], [0.19, 0.62], [0.82, 0.61]]],
-    5: [[[0.75, 0.13], [0.29, 0.13], [0.24, 0.47], [0.58, 0.44], [0.77, 0.57], [0.7, 0.81], [0.42, 0.9], [0.2, 0.77]]],
-    6: [[[0.7, 0.15], [0.45, 0.1], [0.24, 0.34], [0.2, 0.67], [0.35, 0.88], [0.64, 0.87], [0.78, 0.69], [0.66, 0.5], [0.39, 0.47], [0.23, 0.6]]],
-    7: [[[0.18, 0.14], [0.8, 0.14], [0.59, 0.43], [0.43, 0.88]]],
-    8: [[[0.48, 0.48], [0.27, 0.38], [0.25, 0.19], [0.45, 0.09], [0.69, 0.18], [0.69, 0.36], [0.48, 0.48], [0.26, 0.61], [0.29, 0.82], [0.53, 0.91], [0.75, 0.78], [0.72, 0.58], [0.48, 0.48]]],
-    9: [[[0.73, 0.48], [0.57, 0.55], [0.31, 0.48], [0.22, 0.29], [0.36, 0.1], [0.64, 0.12], [0.77, 0.35], [0.72, 0.7], [0.55, 0.89], [0.31, 0.86]]]
-};
-
-function seededRandom(seed: number) {
-    let state = seed >>> 0;
-    return () => {
-        state = (state * 1664525 + 1013904223) >>> 0;
-        return state / 4294967296;
+interface MnistModelFile {
+    format: string;
+    architecture: {
+        input: [number, number];
+        convChannels: number;
+        kernel: number;
+        pooled: [number, number];
+        hidden: number;
+        output: number;
     };
+    normalization: { mean: number; std: number };
+    epochs: number;
+    optimizer: string;
+    trainAccuracy: number;
+    testAccuracy: number;
+    convW: string;
+    convWScale: number;
+    convB: number[];
+    denseW: string;
+    denseWScale: number;
+    denseB: number[];
+    outputW: string;
+    outputWScale: number;
+    outputB: number[];
+    samples: { count: number; images: string; labels: string };
 }
 
-function drawDigit(canvas: HTMLCanvasElement, digit: number, seed: number) {
+interface MnistModel extends Omit<MnistModelFile, 'convW' | 'denseW' | 'outputW' | 'samples'> {
+    convW: Int8Array;
+    denseW: Int8Array;
+    outputW: Int8Array;
+    sampleImages: Uint8Array;
+    sampleLabels: Uint8Array;
+}
+
+let modelPromise: Promise<MnistModel | null> | null = null;
+let cardPlaceholders = new WeakMap<HTMLButtonElement, HTMLElement>();
+let interactionLocked = false;
+const neuralReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const neuralMobile = window.matchMedia('(max-width: 768px)');
+let neuralInitialized = false;
+
+function drawSample(canvas: HTMLCanvasElement, pixels: Uint8Array) {
     const context = canvas.getContext('2d');
     if (!context) return;
-    const random = seededRandom(seed);
-    context.clearRect(0, 0, 28, 28);
-    context.fillStyle = '#11131a';
-    context.fillRect(0, 0, 28, 28);
-    context.strokeStyle = '#eef8f8';
-    context.lineWidth = 2.2 + random() * 1.2;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    context.shadowColor = 'rgba(120, 215, 217, 0.2)';
-    context.shadowBlur = 1;
-
-    const tilt = (random() - 0.5) * 3;
-    const jitter = () => (random() - 0.5) * 1.7;
-    for (const path of digitPaths[digit]) {
-        const points = path.map(([x, y]) => [3 + x * 22 + tilt * (y - 0.5) + jitter(), 3 + y * 22 + jitter()]);
-        context.beginPath();
-        context.moveTo(points[0][0], points[0][1]);
-        for (let index = 1; index < points.length - 1; index++) {
-            const current = points[index];
-            const next = points[index + 1];
-            context.quadraticCurveTo(current[0], current[1], (current[0] + next[0]) / 2, (current[1] + next[1]) / 2);
-        }
-        const last = points[points.length - 1];
-        context.lineTo(last[0], last[1]);
-        context.stroke();
+    const image = context.createImageData(28, 28);
+    for (let index = 0; index < pixels.length; index++) {
+        const offset = index * 4;
+        image.data[offset] = pixels[index];
+        image.data[offset + 1] = pixels[index];
+        image.data[offset + 2] = pixels[index];
+        image.data[offset + 3] = 255;
     }
+    context.putImageData(image, 0, 0);
 }
 
-function randomDigits() {
+function randomSampleIndices(model: MnistModel) {
     const digits = Array.from({ length: 10 }, (_, index) => index);
     for (let index = digits.length - 1; index > 0; index--) {
         const swap = Math.floor(Math.random() * (index + 1));
         [digits[index], digits[swap]] = [digits[swap], digits[index]];
     }
-    return digits.slice(0, 3);
+    return digits.slice(0, 6).map((digit) => {
+        const candidates: number[] = [];
+        model.sampleLabels.forEach((label, index) => {
+            if (label === digit) candidates.push(index);
+        });
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    });
 }
 
-function makeSamples() {
-    if (!samples) return;
+async function makeSamples() {
+    if (!samples || interactionLocked) return;
+    const model = await modelPromise;
+    if (!model || interactionLocked) return;
+    inputTarget?.querySelector('.mnist-card.is-docked')?.remove();
+    inputTarget?.classList.remove('has-digit');
     samples.replaceChildren();
-    randomDigits().forEach((digit, index) => {
+    cardPlaceholders = new WeakMap();
+    resetNetworkVisual();
+    randomSampleIndices(model).forEach((sampleIndex, index) => {
+        const digit = model.sampleLabels[sampleIndex];
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'mnist-card';
@@ -86,32 +96,37 @@ function makeSamples() {
         canvas.width = 28;
         canvas.height = 28;
         canvas.setAttribute('aria-hidden', 'true');
-        drawDigit(canvas, digit, Math.floor(Math.random() * 100000) + index * 97);
+        const start = sampleIndex * 28 * 28;
+        drawSample(canvas, model.sampleImages.subarray(start, start + 28 * 28));
         button.append(canvas);
         samples.append(button);
-        addSampleInteractions(button, canvas, digit);
+        addSampleInteractions(button, canvas);
     });
 }
 
-function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElement, digit: number) {
+function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElement) {
     let startX = 0;
     let startY = 0;
     let pointerId = -1;
     let moved = false;
     let suppressClick = false;
 
+    button.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse') button.classList.add('is-hovered');
+    });
+    button.addEventListener('pointerleave', () => button.classList.remove('is-hovered'));
+
     button.addEventListener('click', () => {
         if (suppressClick) {
             suppressClick = false;
             return;
         }
-        loadDigit(digit, canvas);
-        button.classList.add('is-selected');
-        window.setTimeout(() => button.classList.remove('is-selected'), 420);
+        if (button.classList.contains('is-docked')) void unselectCard(button);
+        else void selectCard(button, canvas);
     });
 
     button.addEventListener('pointerdown', (event) => {
-        if (event.button !== 0) return;
+        if (event.button !== 0 || interactionLocked) return;
         event.preventDefault();
         pointerId = event.pointerId;
         startX = event.clientX;
@@ -143,15 +158,9 @@ function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElem
         suppressClick = moved;
 
         if (dropped && target) {
-            const currentX = Number.parseFloat(button.style.getPropertyValue('--drag-x')) || 0;
-            const currentY = Number.parseFloat(button.style.getPropertyValue('--drag-y')) || 0;
-            button.classList.add('is-snapping');
-            button.style.setProperty('--drag-x', `${currentX + target.left + target.width / 2 - (card.left + card.width / 2)}px`);
-            button.style.setProperty('--drag-y', `${currentY + target.top + target.height / 2 - (card.top + card.height / 2)}px`);
-            window.setTimeout(() => {
-                loadDigit(digit, canvas);
-                resetDraggedCard(button);
-            }, 220);
+            void selectCard(button, canvas);
+        } else if (button.classList.contains('is-docked') && moved) {
+            void unselectCard(button);
         } else {
             resetDraggedCard(button);
         }
@@ -166,12 +175,104 @@ function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElem
     });
 }
 
+function reserveShelfSlot(button: HTMLButtonElement) {
+    if (!samples) return null;
+    let placeholder = cardPlaceholders.get(button);
+    if (!placeholder?.isConnected && button.parentElement === samples) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'mnist-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        button.replaceWith(placeholder);
+        cardPlaceholders.set(button, placeholder);
+        return placeholder;
+    }
+    return placeholder ?? null;
+}
+
+function prepareFlight(button: HTMLButtonElement, bounds: DOMRect) {
+    if (!neuralBackground) return;
+    neuralBackground.append(button);
+    button.classList.remove('is-docked', 'is-dragging', 'is-snapping', 'is-returning', 'is-hovered');
+    button.classList.add('is-flight');
+    button.style.setProperty('--drag-x', '0px');
+    button.style.setProperty('--drag-y', '0px');
+    button.style.left = `${bounds.left}px`;
+    button.style.top = `${bounds.top}px`;
+}
+
+async function flyCard(button: HTMLButtonElement, from: DOMRect, to: DOMRect) {
+    prepareFlight(button, from);
+    const animation = button.animate([
+        { left: `${from.left}px`, top: `${from.top}px` },
+        { left: `${to.left + (to.width - from.width) / 2}px`, top: `${to.top + (to.height - from.height) / 2}px` }
+    ], {
+        duration: neuralReducedMotion.matches ? 0 : 320,
+        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+        fill: 'forwards'
+    });
+    try {
+        await animation.finished;
+    } catch {
+        // A superseded animation is simply finalized at its destination.
+    }
+    animation.cancel();
+}
+
+function finishFlight(button: HTMLButtonElement) {
+    button.classList.remove('is-flight', 'is-dragging', 'is-snapping', 'is-returning');
+    button.style.removeProperty('left');
+    button.style.removeProperty('top');
+    button.style.setProperty('--drag-x', '0px');
+    button.style.setProperty('--drag-y', '0px');
+}
+
+async function returnCardHome(button: HTMLButtonElement) {
+    const placeholder = cardPlaceholders.get(button);
+    if (!samples || !placeholder?.isConnected) return;
+    const from = button.getBoundingClientRect();
+    const to = placeholder.getBoundingClientRect();
+    await flyCard(button, from, to);
+    placeholder.replaceWith(button);
+    cardPlaceholders.delete(button);
+    finishFlight(button);
+}
+
+async function selectCard(button: HTMLButtonElement, canvas: HTMLCanvasElement) {
+    if (!inputTarget || !samples || interactionLocked || button.classList.contains('is-docked')) return;
+    interactionLocked = true;
+    const from = button.getBoundingClientRect();
+    reserveShelfSlot(button);
+    const target = inputTarget.getBoundingClientRect();
+    const previous = inputTarget.querySelector<HTMLButtonElement>('.mnist-card.is-docked');
+    inputTarget.classList.add('is-over');
+    await Promise.all([
+        flyCard(button, from, target),
+        previous ? returnCardHome(previous) : Promise.resolve()
+    ]);
+    inputTarget.append(button);
+    finishFlight(button);
+    button.classList.add('is-docked');
+    inputTarget.classList.add('has-digit');
+    inputTarget.classList.remove('is-over');
+    await loadDigit(canvas);
+    interactionLocked = false;
+}
+
+async function unselectCard(button: HTMLButtonElement) {
+    if (!inputTarget || interactionLocked || !button.classList.contains('is-docked')) return;
+    interactionLocked = true;
+    inputTarget.classList.remove('has-digit', 'is-over');
+    await returnCardHome(button);
+    resetNetworkVisual();
+    interactionLocked = false;
+}
+
 function resetDraggedCard(button: HTMLButtonElement) {
     button.classList.remove('is-dragging', 'is-snapping');
     button.classList.add('is-returning');
     button.style.setProperty('--drag-x', '0px');
     button.style.setProperty('--drag-y', '0px');
-    window.setTimeout(() => button.classList.remove('is-returning'), 280);
+    window.setTimeout(() => button.classList.remove('is-returning'), 340);
 }
 
 function centerOf(element: Element, bounds: DOMRect) {
@@ -184,8 +285,8 @@ function buildConnections() {
     links.replaceChildren();
     const bounds = diagram.getBoundingClientRect();
     links.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
-    const featureNodes = Array.from(diagram.querySelectorAll<HTMLElement>('[data-node^="feature-"]'));
-    const hiddenNodes = Array.from(diagram.querySelectorAll<HTMLElement>('[data-node^="hidden-"]'));
+    const hidden1Nodes = Array.from(diagram.querySelectorAll<HTMLElement>('[data-node^="hidden1-"]'));
+    const hidden2Nodes = Array.from(diagram.querySelectorAll<HTMLElement>('[data-node^="hidden2-"]'));
     const outputNodes = Array.from(diagram.querySelectorAll<HTMLElement>('[data-output] .neural-node'));
 
     const connect = (from: Element[], to: Element[], group: string) => {
@@ -206,126 +307,234 @@ function buildConnections() {
         });
     };
 
-    connect([inputTarget], featureNodes, 'input');
-    connect(featureNodes, hiddenNodes, 'feature');
-    connect(hiddenNodes, outputNodes, 'output');
+    connect([inputTarget], hidden1Nodes, 'input');
+    connect(hidden1Nodes, hidden2Nodes, 'hidden');
+    connect(hidden2Nodes, outputNodes, 'output');
 }
 
-function featureValuesFor(canvas: HTMLCanvasElement) {
-    const context = canvas.getContext('2d');
-    if (!context) return Array(6).fill(0.1);
-    const pixels = context.getImageData(0, 0, 28, 28).data;
-    const regions = [
-        { x0: 0, x1: 28, y0: 0, y1: 28, scale: 5.1 },
-        { x0: 0, x1: 28, y0: 0, y1: 10, scale: 4.2 },
-        { x0: 0, x1: 28, y0: 9, y1: 19, scale: 4.2 },
-        { x0: 0, x1: 28, y0: 18, y1: 28, scale: 4.2 },
-        { x0: 0, x1: 11, y0: 0, y1: 28, scale: 4.2 },
-        { x0: 17, x1: 28, y0: 0, y1: 28, scale: 4.2 }
-    ];
-    return regions.map(({ x0, x1, y0, y1, scale }) => {
-        let ink = 0;
-        for (let y = y0; y < y1; y++) {
-            for (let x = x0; x < x1; x++) ink += Math.max(0, pixels[(y * 28 + x) * 4] - 17) / 238;
+function decodeUint8(encoded: string) {
+    const binary = atob(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+}
+
+function decodeInt8(encoded: string) {
+    return new Int8Array(decodeUint8(encoded).buffer);
+}
+
+async function loadModel(): Promise<MnistModel> {
+    const response = await fetch('/mnist-model.json');
+    if (!response.ok) throw new Error(`model request failed (${response.status})`);
+    const file = await response.json() as MnistModelFile;
+    const { convChannels, hidden, output } = file.architecture;
+    const convW = decodeInt8(file.convW);
+    const denseW = decodeInt8(file.denseW);
+    const outputW = decodeInt8(file.outputW);
+    const sampleImages = decodeUint8(file.samples.images);
+    const sampleLabels = decodeUint8(file.samples.labels);
+    if (
+        file.format !== 'mnist-cnn-int8-v1'
+        || file.architecture.input[0] !== 28
+        || file.architecture.input[1] !== 28
+        || file.architecture.kernel !== 3
+        || file.architecture.pooled[0] !== 6
+        || file.architecture.pooled[1] !== 6
+        || output !== 10
+        || convW.length !== 9 * convChannels
+        || denseW.length !== 6 * 6 * convChannels * hidden
+        || outputW.length !== hidden * output
+        || sampleImages.length !== file.samples.count * 28 * 28
+        || sampleLabels.length !== file.samples.count
+    ) {
+        throw new Error('model file has an unexpected shape');
+    }
+    const { samples: _samples, ...metadata } = file;
+    return { ...metadata, convW, denseW, outputW, sampleImages, sampleLabels };
+}
+
+function maxPool2x2(values: Float32Array, width: number, channels: number) {
+    const pooledWidth = Math.floor(width / 2);
+    const pooled = new Float32Array(pooledWidth * pooledWidth * channels);
+    for (let y = 0; y < pooledWidth; y++) {
+        for (let x = 0; x < pooledWidth; x++) {
+            for (let channel = 0; channel < channels; channel++) {
+                let maximum = -Infinity;
+                for (let dy = 0; dy < 2; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
+                        const index = (((y * 2 + dy) * width + x * 2 + dx) * channels) + channel;
+                        maximum = Math.max(maximum, values[index]);
+                    }
+                }
+                pooled[((y * pooledWidth + x) * channels) + channel] = maximum;
+            }
         }
-        return Math.min(1, 0.08 + ink / ((x1 - x0) * (y1 - y0)) * scale);
+    }
+    return { values: pooled, width: pooledWidth };
+}
+
+function infer(canvas: HTMLCanvasElement, model: MnistModel) {
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('could not read digit pixels');
+    const pixels = context.getImageData(0, 0, 28, 28).data;
+    const { convChannels, hidden: hiddenSize, output: outputSize } = model.architecture;
+    const input = new Float32Array(28 * 28);
+    for (let index = 0; index < input.length; index++) {
+        input[index] = (pixels[index * 4] / 255 - model.normalization.mean) / model.normalization.std;
+    }
+
+    const convWidth = 26;
+    const conv = new Float32Array(convWidth * convWidth * convChannels);
+    for (let y = 0; y < convWidth; y++) {
+        for (let x = 0; x < convWidth; x++) {
+            for (let channel = 0; channel < convChannels; channel++) {
+                let value = model.convB[channel];
+                for (let kernelY = 0; kernelY < 3; kernelY++) {
+                    for (let kernelX = 0; kernelX < 3; kernelX++) {
+                        const inputValue = input[(y + kernelY) * 28 + x + kernelX];
+                        const weightIndex = ((kernelY * 3 + kernelX) * convChannels) + channel;
+                        value += inputValue * model.convW[weightIndex] * model.convWScale;
+                    }
+                }
+                conv[((y * convWidth + x) * convChannels) + channel] = Math.max(0, value);
+            }
+        }
+    }
+
+    const pool1 = maxPool2x2(conv, convWidth, convChannels);
+    const pool2 = maxPool2x2(pool1.values, pool1.width, convChannels);
+    const hidden1 = new Float32Array(convChannels);
+    for (let channel = 0; channel < convChannels; channel++) {
+        let maximum = 0;
+        for (let position = 0; position < pool2.width * pool2.width; position++) {
+            maximum = Math.max(maximum, pool2.values[position * convChannels + channel]);
+        }
+        hidden1[channel] = maximum;
+    }
+
+    const hidden2 = new Float32Array(hiddenSize);
+    for (let hiddenIndex = 0; hiddenIndex < hiddenSize; hiddenIndex++) {
+        let value = model.denseB[hiddenIndex];
+        for (let featureIndex = 0; featureIndex < pool2.values.length; featureIndex++) {
+            value += pool2.values[featureIndex] * model.denseW[featureIndex * hiddenSize + hiddenIndex] * model.denseWScale;
+        }
+        hidden2[hiddenIndex] = Math.max(0, value);
+    }
+
+    const logits = new Float32Array(outputSize);
+    for (let outputIndex = 0; outputIndex < outputSize; outputIndex++) {
+        let value = model.outputB[outputIndex];
+        for (let hiddenIndex = 0; hiddenIndex < hiddenSize; hiddenIndex++) {
+            value += hidden2[hiddenIndex] * model.outputW[hiddenIndex * outputSize + outputIndex] * model.outputWScale;
+        }
+        logits[outputIndex] = value;
+    }
+    const maximum = Math.max(...logits);
+    const probabilities = Array.from(logits, (value) => Math.exp(value - maximum));
+    const total = probabilities.reduce((sum, value) => sum + value, 0);
+    return { hidden1, hidden2, features: pool2.values, probabilities: probabilities.map((value) => value / total) };
+}
+
+function displayHiddenLayer(selector: string, values: Float32Array, label: string) {
+    const indices = Array.from(values.keys()).sort((a, b) => values[b] - values[a]).slice(0, 8);
+    const maximum = Math.max(...values, 0.001);
+    diagram?.querySelectorAll<HTMLElement>(selector).forEach((node, index) => {
+        const modelIndex = indices[index];
+        const activation = values[modelIndex];
+        node.dataset.hiddenIndex = String(modelIndex);
+        node.title = `${label} unit ${modelIndex}: ${activation.toFixed(2)}`;
+        node.setAttribute('aria-label', node.title);
+        node.style.setProperty('--activation', (activation / maximum).toFixed(3));
     });
+    return { indices, maximum };
 }
 
-function hiddenValuesFor(features: number[], digit: number) {
-    return Array.from({ length: 8 }, (_, hiddenIndex) => {
-        let weighted = 0;
-        let totalWeight = 0;
-        features.forEach((feature, featureIndex) => {
-            const weight = 0.2 + Math.abs(Math.sin((hiddenIndex + 1) * (featureIndex + 2) * 1.17 + digit * 0.31));
-            weighted += feature * weight;
-            totalWeight += weight;
-        });
-        return Math.min(1, 0.08 + weighted / totalWeight);
+async function loadDigit(source: HTMLCanvasElement) {
+    if (!diagram) return;
+
+    const model = await modelPromise;
+    if (!model) return;
+    const { hidden1, hidden2, features, probabilities } = infer(source, model);
+    const prediction = probabilities.indexOf(Math.max(...probabilities));
+    const hidden1Display = displayHiddenLayer('[data-node^="hidden1-"]', hidden1, 'Convolution channel');
+    const hidden2Display = displayHiddenLayer('[data-node^="hidden2-"]', hidden2, 'Dense layer');
+    diagram.querySelectorAll<HTMLElement>('[data-output] .neural-node').forEach((node, index) => {
+        node.style.setProperty('--activation', Math.min(1, probabilities[index] * 1.45 + 0.06).toFixed(3));
     });
-}
-
-function probabilitiesFor(digit: number) {
-    const confusions: Record<number, number> = { 0: 6, 1: 7, 2: 7, 3: 5, 4: 9, 5: 3, 6: 8, 7: 1, 8: 6, 9: 4 };
-    const logits = Array.from({ length: 10 }, (_, index) => 0.1 + Math.abs(Math.sin(digit * 4.17 + index * 2.31)) * 0.65);
-    logits[confusions[digit]] = 1.85;
-    logits[digit] = 4.15;
-    const exponents = logits.map((value) => Math.exp(value));
-    const total = exponents.reduce((sum, value) => sum + value, 0);
-    return exponents.map((value) => value / total);
-}
-
-function setNodeActivation(selector: string, values: number[]) {
-    document.querySelectorAll<HTMLElement>(selector).forEach((node, index) => {
-        const activation = values[index] ?? 0;
-        node.style.setProperty('--activation', activation.toFixed(3));
-    });
-}
-
-function loadDigit(digit: number, source: HTMLCanvasElement) {
-    if (!inputCanvas || !status || !diagram) return;
-    const context = inputCanvas.getContext('2d');
-    context?.clearRect(0, 0, 28, 28);
-    context?.drawImage(source, 0, 0);
-    inputTarget?.classList.add('has-digit');
-
-    const featureValues = featureValuesFor(source);
-    const hiddenValues = hiddenValuesFor(featureValues, digit);
-    const probabilities = probabilitiesFor(digit);
-    setNodeActivation('[data-node^="feature-"]', featureValues);
-    setNodeActivation('[data-node^="hidden-"]', hiddenValues);
-    setNodeActivation('[data-output] .neural-node', probabilities.map((value) => Math.min(1, value * 1.45 + 0.06)));
 
     document.querySelectorAll<HTMLElement>('[data-output]').forEach((output, index) => {
-        output.classList.toggle('is-prediction', index === digit);
+        output.classList.toggle('is-prediction', index === prediction);
         const value = output.querySelector<HTMLElement>('small');
         if (value) value.textContent = `${Math.round(probabilities[index] * 100)}%`;
     });
 
-    links?.querySelectorAll<SVGLineElement>('line').forEach((line) => {
+    const maximumContribution = { hidden: 0, output: 0 };
+    links?.querySelectorAll<SVGLineElement>('line[data-group="hidden"], line[data-group="output"]').forEach((line) => {
         const sourceIndex = Number(line.dataset.source);
         const targetIndex = Number(line.dataset.target);
-        const group = line.dataset.group;
-        let activation = 0;
-        if (group === 'input') activation = featureValues[targetIndex];
-        if (group === 'feature') activation = (featureValues[sourceIndex] + hiddenValues[targetIndex]) / 2;
-        if (group === 'output') activation = (hiddenValues[sourceIndex] + probabilities[targetIndex]) / 2;
-        line.style.setProperty('--activation', activation.toFixed(3));
+        let contribution = 0;
+        if (line.dataset.group === 'hidden') {
+            const sourceModelIndex = hidden1Display.indices[sourceIndex];
+            const targetModelIndex = hidden2Display.indices[targetIndex];
+            for (let position = 0; position < 6 * 6; position++) {
+                const featureIndex = position * model.architecture.convChannels + sourceModelIndex;
+                contribution += features[featureIndex]
+                    * model.denseW[featureIndex * model.architecture.hidden + targetModelIndex]
+                    * model.denseWScale;
+            }
+        } else {
+            const sourceModelIndex = hidden2Display.indices[sourceIndex];
+            contribution = hidden2[sourceModelIndex]
+                * model.outputW[sourceModelIndex * model.architecture.output + targetIndex]
+                * model.outputWScale;
+        }
+        line.dataset.contribution = String(contribution);
+        const group = line.dataset.group as 'hidden' | 'output';
+        maximumContribution[group] = Math.max(maximumContribution[group], Math.abs(contribution));
+    });
+    links?.querySelectorAll<SVGLineElement>('line').forEach((line) => {
+        if (line.dataset.group === 'input') {
+            const modelIndex = hidden1Display.indices[Number(line.dataset.target)];
+            line.style.setProperty('--activation', (hidden1[modelIndex] / hidden1Display.maximum).toFixed(3));
+            return;
+        }
+        const contribution = Number(line.dataset.contribution);
+        const group = line.dataset.group as 'hidden' | 'output';
+        line.classList.toggle('is-inhibitory', contribution < 0);
+        line.style.setProperty('--activation', (Math.abs(contribution) / Math.max(maximumContribution[group], 0.001)).toFixed(3));
     });
 
-    status.innerHTML = `classified as <strong>${digit}</strong> <span>${Math.round(probabilities[digit] * 100)}% confidence</span>`;
     diagram.classList.remove('has-result');
     requestAnimationFrame(() => diagram.classList.add('has-result'));
 }
 
-function setMode(mode: BackgroundMode) {
-    document.body.dataset.background = mode;
-    modeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.backgroundMode === mode)));
-    if (neuralBackground) neuralBackground.setAttribute('aria-hidden', String(mode !== 'neural'));
-    if (lifeControls) lifeControls.hidden = mode !== 'life';
-    if (neuralControls) neuralControls.hidden = mode !== 'neural';
-    document.dispatchEvent(new CustomEvent('background:mode', { detail: { mode } }));
-    try {
-        localStorage.setItem('portfolio-background', mode);
-    } catch {
-        // The mode remains usable when storage is unavailable.
-    }
-    if (mode === 'neural') requestAnimationFrame(buildConnections);
+function resetNetworkVisual() {
+    diagram?.classList.remove('has-result');
+    diagram?.querySelectorAll<HTMLElement>('.neural-node').forEach((node) => {
+        node.style.setProperty('--activation', '0');
+    });
+    diagram?.querySelectorAll<HTMLElement>('[data-output]').forEach((output) => {
+        output.classList.remove('is-prediction');
+        const value = output.querySelector<HTMLElement>('small');
+        if (value) value.textContent = '0%';
+    });
+    links?.querySelectorAll<SVGLineElement>('line').forEach((line) => {
+        line.style.setProperty('--activation', '0');
+        line.classList.remove('is-inhibitory');
+        delete line.dataset.contribution;
+    });
 }
 
-if (neuralBackground && diagram && samples && inputTarget && links) {
+function initializeNeuralNetwork() {
+    if (neuralInitialized || neuralMobile.matches || !neuralBackground || !diagram || !samples || !inputTarget || !links) return;
+    neuralInitialized = true;
+    modelPromise = loadModel().catch(() => null);
     makeSamples();
-    modeButtons.forEach((button) => {
-        button.addEventListener('click', () => setMode(button.dataset.backgroundMode as BackgroundMode));
-    });
-    document.querySelector<HTMLButtonElement>('#neural-new-samples')?.addEventListener('click', makeSamples);
+    document.querySelector<HTMLButtonElement>('#neural-refresh-samples')?.addEventListener('click', makeSamples);
     const resizeObserver = new ResizeObserver(() => requestAnimationFrame(buildConnections));
     resizeObserver.observe(diagram);
-    let initialMode: BackgroundMode = 'life';
-    try {
-        if (localStorage.getItem('portfolio-background') === 'neural') initialMode = 'neural';
-    } catch {
-        // Default to Life when storage is unavailable.
-    }
-    setMode(initialMode);
+    requestAnimationFrame(buildConnections);
 }
+
+initializeNeuralNetwork();
+neuralMobile.addEventListener('change', initializeNeuralNetwork);

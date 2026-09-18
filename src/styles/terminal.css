@@ -72,11 +72,6 @@ body {
     opacity: 0.1;
 }
 
-#life-canvas:focus-visible {
-    outline: 1px solid var(--secondary-color);
-    outline-offset: -5px;
-}
-
 .sr-only {
     position: absolute;
     width: 1px;
@@ -370,129 +365,6 @@ span.tab-hint {
     line-height: 1.4;
 }
 
-.background-toolbar {
-    position: fixed;
-    top: 20px;
-    right: 40px;
-    font-family: 'IBM Plex Mono', Consolas, Monaco, monospace;
-    font-size: 14px;
-    z-index: 1000;
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-}
-
-.background-switcher {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    min-height: 34px;
-    padding: 0 7px;
-    color: #9aa3af;
-    background: var(--bg-color);
-    border: 1px solid rgba(231, 236, 239, 0.13);
-    border-radius: 3px;
-}
-
-.background-switcher button,
-.neural-controls button {
-    font: inherit;
-    color: #a2abb5;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid transparent;
-    min-height: 32px;
-    padding: 3px 2px;
-    cursor: pointer;
-}
-
-.background-switcher button:hover,
-.background-switcher button[aria-pressed='true'],
-.neural-controls button:hover {
-    color: var(--secondary-color);
-}
-
-.background-switcher button[aria-pressed='true'] {
-    border-bottom-color: currentColor;
-}
-
-.background-switcher button:focus-visible,
-.neural-controls button:focus-visible {
-    outline: 1px solid var(--secondary-color);
-    outline-offset: 2px;
-    border-radius: 2px;
-}
-
-.life-controls,
-.neural-controls {
-    position: static;
-}
-
-.life-controls[hidden],
-.neural-controls[hidden] {
-    display: none;
-}
-
-.life-speed {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 5px;
-    background: var(--bg-color);
-    border-radius: 3px;
-}
-
-.life-speed button {
-    font: inherit;
-    color: #a2abb5;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid transparent;
-    min-width: 34px;
-    min-height: 34px;
-    padding: 4px 6px;
-    cursor: pointer;
-}
-
-.life-speed button:hover,
-.life-speed button[aria-pressed='true'] {
-    color: var(--secondary-color);
-}
-
-.life-speed button[aria-pressed='true'] {
-    border-bottom-color: currentColor;
-}
-
-.life-speed button:focus-visible {
-    outline: 1px solid var(--secondary-color);
-    outline-offset: 2px;
-    border-radius: 2px;
-}
-
-#life-pointer-help {
-    margin-top: 5px;
-    color: #9aa3af;
-    font-size: 10px;
-    background: var(--bg-color);
-}
-
-.neural-controls {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-height: 34px;
-    padding: 0 7px;
-    color: #9aa3af;
-    background: var(--bg-color);
-    border-radius: 3px;
-}
-
-.neural-controls p {
-    font-size: 10px;
-}
-
 /* MNIST neural-network background */
 .neural-background {
     position: fixed;
@@ -500,87 +372,99 @@ span.tab-hint {
     z-index: 3;
     overflow: hidden;
     pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.985);
-    transition: opacity 350ms ease, transform 350ms ease, visibility 350ms;
-}
-
-body[data-background='neural'] .neural-background {
     opacity: 1;
     visibility: visible;
     transform: scale(1);
 }
 
-body[data-background='neural'] #life-canvas {
-    opacity: 0;
-}
-
-body[data-background='neural'] .terminal-container::before {
-    background: rgba(33, 35, 44, 0.68);
-}
-
 .neural-background::before {
-    content: 'MNIST // SIGNAL PATH';
+    content: '';
     position: absolute;
-    right: 42px;
-    bottom: 24px;
-    color: rgba(78, 179, 181, 0.16);
-    font-size: clamp(20px, 2vw, 32px);
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    writing-mode: vertical-rl;
+    z-index: 0;
+    top: 70px;
+    right: clamp(38px, 3.5vw, 76px);
+    width: clamp(480px, 40vw, 570px);
+    height: min(640px, calc(100dvh - 70px));
+    border-radius: 28px;
+    background: rgba(33, 35, 44, 0.68);
+    filter: blur(24px);
+    pointer-events: none;
+}
+
+.terminal-container::before {
+    background: rgba(33, 35, 44, 0.68);
 }
 
 .mnist-shelf {
     position: absolute;
-    top: 110px;
-    right: 70px;
-    width: min(520px, 40vw);
+    z-index: 1;
+    top: 98px;
+    right: clamp(56px, 5vw, 96px);
+    width: clamp(440px, 38vw, 530px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 22px;
-}
-
-.network-kicker,
-.layer-label {
-    color: rgba(231, 236, 239, 0.46);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.network-kicker {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    gap: 12px;
 }
 
 .mnist-samples {
     display: flex;
-    gap: 24px;
+    gap: 14px;
     align-items: center;
+}
+
+.mnist-placeholder {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.mnist-refresh {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(231, 236, 239, 0.55);
+    font: inherit;
+    font-size: 18px;
+    line-height: 1;
+    background: rgba(17, 19, 26, 0.72);
+    border: 1px solid rgba(231, 236, 239, 0.22);
+    border-radius: 2px;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    pointer-events: auto;
+    transition: color 160ms steps(2, end), border-color 160ms steps(2, end), box-shadow 160ms steps(2, end), transform 160ms steps(3, end);
+}
+
+.mnist-refresh:hover,
+.mnist-refresh:focus-visible {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    box-shadow: 2px 2px 0 rgba(78, 179, 181, 0.2), 0 0 10px rgba(78, 179, 181, 0.18);
+    outline: none;
+    transform: rotate(18deg);
 }
 
 .mnist-card {
     --drag-x: 0px;
     --drag-y: 0px;
-    width: 58px;
-    height: 58px;
+    width: 48px;
+    height: 48px;
     padding: 5px;
     color: var(--text-color);
     background: #11131a;
     border: 1px solid rgba(231, 236, 239, 0.24);
-    border-radius: 4px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(78, 179, 181, 0);
+    border-radius: 1px;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.28), 0 0 0 0 rgba(78, 179, 181, 0);
     cursor: grab;
     touch-action: none;
     pointer-events: auto;
     transform: translate(var(--drag-x), var(--drag-y));
     animation: digit-float 4.6s ease-in-out var(--float-delay) infinite;
-    transition: border-color 160ms ease, box-shadow 160ms ease, transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: border-color 160ms steps(2, end), box-shadow 160ms steps(2, end), transform 260ms steps(8, end);
 }
 
 .mnist-card canvas,
@@ -591,12 +475,11 @@ body[data-background='neural'] .terminal-container::before {
     image-rendering: pixelated;
 }
 
-.mnist-card:hover,
-.mnist-card:focus-visible,
-.mnist-card.is-selected {
+.mnist-card.is-hovered,
+.mnist-card:focus-visible {
     border-color: var(--secondary-color);
     outline: none;
-    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28), 0 0 20px rgba(78, 179, 181, 0.25);
+    box-shadow: 3px 3px 0 rgba(78, 179, 181, 0.2), 0 0 12px rgba(78, 179, 181, 0.22);
 }
 
 .mnist-card.is-dragging,
@@ -606,9 +489,36 @@ body[data-background='neural'] .terminal-container::before {
     animation: none;
 }
 
+.mnist-card.is-returning {
+    transition: transform 320ms steps(10, end);
+}
+
+.mnist-card.is-flight {
+    position: fixed !important;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    z-index: 30;
+    pointer-events: none;
+    animation: none !important;
+    transform: none !important;
+    translate: none !important;
+    rotate: 0deg !important;
+    transition: none;
+}
+
+.mnist-card.is-docked {
+    position: absolute;
+    inset: -1px;
+    width: 48px;
+    height: 48px;
+    animation: none;
+    box-shadow: 2px 2px 0 rgba(78, 179, 181, 0.2), 0 0 10px rgba(78, 179, 181, 0.2);
+}
+
 .mnist-card.is-dragging {
     cursor: grabbing;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    transition: border-color 160ms steps(2, end), box-shadow 160ms steps(2, end);
 }
 
 @keyframes digit-float {
@@ -618,12 +528,12 @@ body[data-background='neural'] .terminal-container::before {
 
 .network-diagram {
     position: absolute;
-    top: 185px;
-    right: 62px;
-    width: min(560px, 42vw);
-    height: calc(100dvh - 235px);
-    min-height: 500px;
-    max-height: 760px;
+    z-index: 1;
+    top: 195px;
+    right: clamp(56px, 5vw, 96px);
+    width: clamp(440px, 38vw, 530px);
+    height: min(500px, calc(100dvh - 200px));
+    min-height: 380px;
 }
 
 .neural-links {
@@ -639,8 +549,14 @@ body[data-background='neural'] .terminal-container::before {
     stroke: var(--secondary-color);
     stroke-width: calc(0.35px + var(--activation) * 1.4px);
     opacity: calc(0.055 + var(--activation) * 0.52);
+    stroke-dasharray: 2 3;
+    stroke-linecap: square;
     vector-effect: non-scaling-stroke;
-    transition: opacity 520ms ease, stroke-width 520ms ease;
+    transition: opacity 520ms steps(8, end), stroke-width 520ms steps(8, end);
+}
+
+.neural-links line.is-inhibitory {
+    stroke: var(--prompt-color);
 }
 
 .network-layer {
@@ -652,23 +568,16 @@ body[data-background='neural'] .terminal-container::before {
     align-items: center;
 }
 
-.layer-label {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
 .input-layer { top: 0; }
-.feature-layer { top: 27%; }
-.hidden-layer { top: 50%; }
-.output-layer { top: 73%; }
+.hidden-layer-one { top: 26%; }
+.hidden-layer-two { top: 46%; }
+.output-layer { top: 66%; }
 
 .neural-input {
     position: relative;
-    width: 78px;
-    height: 78px;
-    padding: 7px;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     display: grid;
     place-items: center;
     color: rgba(231, 236, 239, 0.5);
@@ -677,10 +586,12 @@ body[data-background='neural'] .terminal-container::before {
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    background: rgba(17, 19, 26, 0.7);
-    border: 1px dashed rgba(78, 179, 181, 0.6);
-    box-shadow: inset 0 0 22px rgba(78, 179, 181, 0.05);
-    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    background:
+        repeating-linear-gradient(0deg, rgba(78, 179, 181, 0.035) 0 1px, transparent 1px 4px),
+        rgba(17, 19, 26, 0.78);
+    border: 1px dashed rgba(78, 179, 181, 0.7);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(78, 179, 181, 0.04);
+    transition: border-color 180ms steps(2, end), box-shadow 180ms steps(2, end), transform 180ms steps(4, end);
 }
 
 .neural-input::before,
@@ -708,17 +619,15 @@ body[data-background='neural'] .terminal-container::before {
 
 .neural-input canvas { display: none; }
 .neural-input.has-digit canvas { display: block; }
-.neural-input.has-digit span { display: none; }
-
 .neural-input.is-over {
     border-color: var(--text-color);
-    box-shadow: 0 0 28px rgba(78, 179, 181, 0.34), inset 0 0 22px rgba(78, 179, 181, 0.12);
+    box-shadow: 3px 3px 0 rgba(78, 179, 181, 0.26), 0 0 12px rgba(78, 179, 181, 0.28);
     transform: scale(1.06);
 }
 
 .node-row,
 .output-row {
-    width: 78%;
+    width: 82%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -732,19 +641,19 @@ body[data-background='neural'] .terminal-container::before {
     display: grid;
     place-items: center;
     border: 1px solid rgba(231, 236, 239, 0.3);
-    border-radius: 50%;
-    background: rgba(33, 35, 44, 0.84);
-    box-shadow: 0 0 calc(2px + var(--activation) * 18px) rgba(78, 179, 181, calc(var(--activation) * 0.65));
-    transition: border-color 480ms ease, box-shadow 480ms ease;
+    border-radius: 2px;
+    background: rgba(22, 24, 31, 0.9);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.28), 0 0 calc(1px + var(--activation) * 13px) rgba(78, 179, 181, calc(var(--activation) * 0.58));
+    transition: border-color 480ms steps(6, end), box-shadow 480ms steps(6, end);
 }
 
 .neural-node i {
-    width: 45%;
-    height: 45%;
-    border-radius: inherit;
+    width: 42%;
+    height: 42%;
+    border-radius: 0;
     background: rgba(78, 179, 181, calc(0.12 + var(--activation) * 0.88));
     transform: scale(calc(0.65 + var(--activation) * 0.6));
-    transition: background 480ms ease, transform 480ms ease;
+    transition: background 480ms steps(6, end), transform 480ms steps(6, end);
 }
 
 .neural-node-small {
@@ -758,13 +667,13 @@ body[data-background='neural'] .terminal-container::before {
 }
 
 .output-node {
-    min-width: 32px;
+    min-width: 26px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 3px;
     color: rgba(231, 236, 239, 0.5);
-    transition: color 480ms ease, transform 480ms ease;
+    transition: color 480ms steps(6, end), transform 480ms steps(6, end);
 }
 
 .output-light {
@@ -775,42 +684,86 @@ body[data-background='neural'] .terminal-container::before {
 .output-node strong {
     font-size: 13px;
     font-weight: 500;
+    font-variant-numeric: tabular-nums;
 }
 
 .output-node small {
     font-size: 9px;
     opacity: 0;
-    transition: opacity 480ms ease;
+    transition: opacity 480ms steps(6, end);
 }
 
 .has-result .output-node small { opacity: 1; }
 
 .output-node.is-prediction {
     color: var(--secondary-color);
-    transform: translateY(-4px);
+    text-shadow: 2px 0 0 rgba(78, 179, 181, 0.16);
+    transform: translateY(-2px);
 }
 
 .output-node.is-prediction .neural-node {
     border-color: var(--secondary-color);
 }
 
-.network-status {
+.network-summary {
     position: absolute;
     left: 50%;
-    bottom: 1%;
+    bottom: 10%;
     transform: translateX(-50%);
     width: max-content;
+    max-width: calc(100vw - 20px);
+    margin: 0;
     color: rgba(231, 236, 239, 0.45);
     font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
 }
 
-.network-status strong { color: var(--secondary-color); }
-.network-status span { color: rgba(231, 236, 239, 0.62); }
+.network-legend {
+    position: absolute;
+    left: 50%;
+    bottom: 5%;
+    width: max-content;
+    max-width: calc(100vw - 20px);
+    margin: 0;
+    color: rgba(231, 236, 239, 0.42);
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
 
-.status-cursor {
-    display: inline-block;
-    color: var(--secondary-color) !important;
-    animation: blink 1s steps(2, end) infinite;
+.network-links {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: max-content;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: rgba(231, 236, 239, 0.38);
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.025em;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: auto;
+}
+
+.network-links a {
+    color: var(--link-color) !important;
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+}
+
+.network-links a:hover,
+.network-links a:focus-visible {
+    color: var(--link-hover-color) !important;
+    border-bottom-color: currentColor;
+    outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -818,8 +771,7 @@ body[data-background='neural'] .terminal-container::before {
         transition: none;
     }
 
-    .mnist-card,
-    .status-cursor {
+    .mnist-card {
         animation: none;
     }
 
@@ -832,16 +784,6 @@ body[data-background='neural'] .terminal-container::before {
     }
 }
 
-@media (min-width: 1000px) {
-    body[data-background='neural'] .terminal-container {
-        padding-right: min(45vw, 650px);
-    }
-
-    body[data-background='neural'] .intro-text {
-        max-width: 660px;
-    }
-}
-
 .copyright {
     position: fixed;
     bottom: 20px;
@@ -851,6 +793,63 @@ body[data-background='neural'] .terminal-container::before {
     color: var(--text-color);
     opacity: 0.6;
     z-index: 1000;
+}
+
+@media (min-width: 1100px) {
+    .terminal-container {
+        width: min(780px, calc(100% - 500px));
+        max-width: none;
+        margin-right: 0;
+        margin-left: clamp(32px, 4vw, 64px);
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+
+    .terminal-container::before {
+        left: -4px;
+        width: max(
+            calc(100% + 8px),
+            calc(100vw - clamp(38px, 3.5vw, 76px) - clamp(480px, 40vw, 570px) - clamp(32px, 4vw, 64px) + 4px)
+        );
+    }
+
+    .intro-text,
+    .panel-box {
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1099px) {
+    .neural-background {
+        position: absolute;
+        height: 610px;
+    }
+
+    .terminal-container {
+        margin-top: 630px;
+    }
+
+    .neural-background::before {
+        top: 66px;
+        right: auto;
+        left: 50%;
+        width: min(570px, calc(100% - 24px));
+        height: 525px;
+        transform: translateX(-50%);
+    }
+
+    .mnist-shelf,
+    .network-diagram {
+        right: auto;
+        left: 50%;
+        width: min(530px, calc(100% - 40px));
+        transform: translateX(-50%);
+    }
+
+    .network-diagram {
+        height: 390px;
+        min-height: 0;
+    }
 }
 
 /* Mobile Responsive Styles */
@@ -910,18 +909,6 @@ body[data-background='neural'] .terminal-container::before {
         padding: 10px;
     }
 
-    /* Keep controls above the terminal and easy to tap. */
-    .background-toolbar {
-        top: 10px;
-        right: 15px;
-        font-size: 14px;
-    }
-
-    .life-speed button {
-        min-width: 40px;
-        min-height: 40px;
-    }
-
     .copyright {
         bottom: 10px;
         right: 15px;
@@ -978,80 +965,5 @@ body[data-background='neural'] .terminal-container::before {
         margin-right: 5px;
     }
 
-    .neural-background {
-        position: absolute;
-        inset: 0 0 auto;
-        height: 675px;
-    }
-
-    body[data-background='neural'] .terminal-container {
-        margin-top: 690px;
-    }
-
-    .neural-background::before {
-        display: none;
-    }
-
-    .mnist-shelf {
-        top: 110px;
-        right: 15px;
-        width: calc(100% - 30px);
-        gap: 14px;
-    }
-
-    .network-kicker {
-        left: 2px;
-        top: -24px;
-        transform: none;
-    }
-
-    .mnist-samples {
-        gap: 18px;
-    }
-
-    .mnist-card {
-        width: 54px;
-        height: 54px;
-    }
-
-    .network-diagram {
-        top: 205px;
-        right: 10px;
-        width: calc(100% - 20px);
-        height: 435px;
-        min-height: 0;
-    }
-
-    .layer-label {
-        font-size: 9px;
-    }
-
-    .node-row { width: 72%; }
-    .output-row { width: 94%; }
-
-    .output-node {
-        min-width: 25px;
-    }
-
-    .output-node strong { font-size: 12px; }
-    .output-node small { font-size: 8px; }
-    .network-status { bottom: 0; }
-}
-
-@media (max-width: 420px) {
-    .background-switcher {
-        gap: 5px;
-    }
-
-    .life-speed button {
-        min-width: 34px;
-        padding-inline: 3px;
-    }
-
-    .network-kicker { display: none; }
-    .mnist-shelf { top: 115px; }
-    .output-row { width: 100%; }
-    .output-node { min-width: 22px; }
-    .output-light { width: 15px; height: 15px; }
-    .layer-label { left: 3px; }
+    .neural-background { display: none; }
 }

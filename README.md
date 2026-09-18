@@ -2,19 +2,21 @@
 
 See the live website on [ericsun.net](https://ericsun.net/).
 
-A simple and lightweight terminal-style portfolio written in Astro, CSS, and TypeScript. A dark terminal sits over a choice of two interactive backgrounds, rendered with Canvas and no extra runtime dependencies.
+A simple and lightweight terminal-style portfolio written in Astro, CSS, and TypeScript. A dark terminal and interactive MNIST network sit over a continuously evolving Conway's Game of Life canvas, with no extra runtime dependencies.
 
-Use the `bg: life / neural` switch in the upper-right corner to move between Conway's Game of Life and an illustrative MNIST neural-network view. Neural mode generates three hand-drawn 28×28 samples: drag one into the input square (or select it with the keyboard) to send its pixel-derived feature activations through the network and light up all ten digit predictions. `new samples` generates another set.
+The neural-network view draws six balanced samples from the official MNIST test set: drag one into the input square (or select it with the keyboard) to run it through a trained `28² → 8×6² → 24 → 10` CNN. The view shows all eight convolution channels, the eight strongest dense activations, learned positive and negative contributions, and all ten softmax probabilities. The refresh control generates another set. Game of Life remains a non-interactive ambient background.
+
+The 133 KiB browser bundle includes int8-quantized CNN weights and 120 balanced display samples. The quantized model reaches 97.38% accuracy on the official 10,000-image MNIST test set. Retrain and replace it reproducibly with:
+
+```sh
+npm run train:mnist
+```
+
+The standalone NumPy training script downloads MNIST into a temporary cache and exports `public/mnist-model.json`; no Python ML framework is required.
 
 The simulation and introduction stay fixed inside the viewport. Only command history
 and the input below the tips and divider scroll.
-Click once to focus the terminal; while its caret is active, ordinary clicks toggle Life cells.
-Links, inputs, speed controls, and text-selection drags retain their normal behavior.
-The top-right control pauses the simulation or selects ½×, 1×, 2×, or 4× speed (1× is eight generations per second).
-Reset restores the starting patterns at the current speed.
-Reduced-motion users start paused, and hidden tabs stop animating.
-The Life canvas is keyboard accessible: Tab to it, use arrow keys to select a cell,
-Space or Enter to toggle it, and Escape to return to typing.
+Game of Life advances at eight generations per second, pauses for reduced-motion users, and stops animating in hidden tabs.
 
 Main page:
 

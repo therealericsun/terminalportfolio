@@ -172,6 +172,7 @@ export function seedLife(board: LifeBoard, warmupGenerations = 90): void {
         return true;
     };
     const narrowPortrait = columns < 70;
+    const roomyPortrait = narrowPortrait && columns >= 47;
     const compactLandscape = columns >= 80 && columns < 105 && rows >= 40 && rows < 60;
     const textArea = narrowPortrait
         ? { left: 1, top: 14, right: columns - 1, bottom: Math.max(15, rows - 34) }
@@ -225,24 +226,31 @@ export function seedLife(board: LifeBoard, warmupGenerations = 90): void {
     } else {
         addB52Bomber(Math.max(1, Math.floor(columns * 0.1)), Math.max(2, rows - 24));
     }
-    if (columns >= 105 && rows >= 60) {
-        // Fire the upper gun off the top edge so the swapped Quasar slot below
-        // it remains collision-free.
+    const wideLayout = columns >= 105 && rows >= 60;
+    if (wideLayout) {
+        // Fire the upper gun off the top edge while leaving a quiet slot near
+        // the upper-left edge for the Quasar.
         addGosperGun(columns - 41, 7, true);
     }
-    // Put the Quasar above the pulsar on wide screens. Smaller layouts keep the
-    // earlier arrangement because the large Quasar has only one collision-free slot.
+    const wideQuasarPosition: Cell = [
+        Math.max(2, Math.min(Math.floor(columns * 0.38), columns - 75)),
+        3,
+    ];
+    // Keep the large Quasar away from the neural-network side on wide screens.
+    // On typical phones, split the lower edge with the pulsar so both of the
+    // larger oscillators remain visible without competing for the same slot.
     const quasarPositions = [
-        ...(narrowPortrait ? [[Math.max(1, Math.floor((columns - 29) / 2)), rows - 31]] : []),
+        ...(roomyPortrait ? [[columns - 31, rows - 31]] : []),
+        ...(narrowPortrait && !roomyPortrait ? [[Math.max(1, Math.floor((columns - 29) / 2)), rows - 31]] : []),
         ...(compactLandscape ? [[3, 14]] : []),
-        [columns - 47, 21],
+        ...(wideLayout ? [wideQuasarPosition] : []),
         [columns - 35, rows - 34],
         [Math.floor((columns - 29) / 2), 5],
     ];
     let quasarPlaced = false;
     for (const [x, y] of quasarPositions) {
         const padding = narrowPortrait || compactLandscape ? 1 : 2;
-        const primaryWidePosition = !narrowPortrait && !compactLandscape && x === columns - 47 && y === 21;
+        const primaryWidePosition = wideLayout && x === wideQuasarPosition[0] && y === wideQuasarPosition[1];
         const spaceAvailable = primaryWidePosition
             ? available(x - padding, y - padding, 29 + padding * 2, 29 + padding * 2)
             : availableForDecoration(x - padding, y - padding, 29 + padding * 2, 29 + padding * 2);
@@ -262,9 +270,10 @@ export function seedLife(board: LifeBoard, warmupGenerations = 90): void {
         }
     }
 
-    // Put the pulsar in the lower-right slot formerly occupied by the Quasar.
+    // Pair the pulsar with the Quasar along the lower edge on phone-sized boards.
     const pulsarPositions = [
-        ...(narrowPortrait ? [[1, 16]] : []),
+        ...(roomyPortrait ? [[1, rows - 16]] : []),
+        ...(narrowPortrait && !roomyPortrait ? [[1, 16]] : []),
         ...(compactLandscape ? [[36, 17]] : []),
         [columns - 18, rows - 18],
         [columns - 18, 21],
