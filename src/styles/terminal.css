@@ -451,20 +451,39 @@ span.tab-hint {
 .mnist-card {
     --drag-x: 0px;
     --drag-y: 0px;
+    position: relative;
+    flex: 0 0 48px;
     width: 48px;
     height: 48px;
-    padding: 5px;
+    padding: 0;
     color: var(--text-color);
-    background: #11131a;
-    border: 1px solid rgba(231, 236, 239, 0.24);
-    border-radius: 1px;
-    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.28), 0 0 0 0 rgba(78, 179, 181, 0);
+    background: transparent;
+    border: 0;
     cursor: grab;
     touch-action: none;
     pointer-events: auto;
     transform: translate(var(--drag-x), var(--drag-y));
+    transition: transform 260ms steps(8, end);
+}
+
+/* Keep the hit area still and large enough for the entire floating motion. */
+.mnist-card::before {
+    content: '';
+    position: absolute;
+    inset: -7px -2px;
+}
+
+.mnist-card-visual {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+    background: #11131a;
+    border: 1px solid rgba(231, 236, 239, 0.24);
+    border-radius: 1px;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.28);
+    pointer-events: none;
     animation: digit-float 4.6s ease-in-out var(--float-delay) infinite;
-    transition: border-color 160ms steps(2, end), box-shadow 160ms steps(2, end), transform 260ms steps(8, end);
 }
 
 .mnist-card canvas,
@@ -475,17 +494,25 @@ span.tab-hint {
     image-rendering: pixelated;
 }
 
-.mnist-card.is-hovered,
 .mnist-card:focus-visible {
-    border-color: var(--secondary-color);
-    outline: none;
-    box-shadow: 3px 3px 0 rgba(78, 179, 181, 0.2), 0 0 12px rgba(78, 179, 181, 0.22);
+    outline: 1px dashed var(--secondary-color);
+    outline-offset: 7px;
+}
+
+@media (any-hover: hover) and (any-pointer: fine) {
+    .mnist-card:hover:not(.is-dragging):not(.is-flight) .mnist-card-visual {
+        border-color: var(--secondary-color);
+        box-shadow: 3px 3px 0 rgba(78, 179, 181, 0.2), 0 0 12px rgba(78, 179, 181, 0.22);
+    }
 }
 
 .mnist-card.is-dragging,
 .mnist-card.is-snapping,
 .mnist-card.is-returning {
     z-index: 20;
+}
+
+.mnist-card:is(.is-dragging, .is-snapping, .is-returning, .is-flight, .is-docked) .mnist-card-visual {
     animation: none;
 }
 
@@ -512,13 +539,11 @@ span.tab-hint {
     inset: -1px;
     width: 48px;
     height: 48px;
-    animation: none;
-    box-shadow: 2px 2px 0 rgba(78, 179, 181, 0.2), 0 0 10px rgba(78, 179, 181, 0.2);
 }
 
 .mnist-card.is-dragging {
     cursor: grabbing;
-    transition: border-color 160ms steps(2, end), box-shadow 160ms steps(2, end);
+    transition: none;
 }
 
 @keyframes digit-float {
@@ -771,7 +796,7 @@ span.tab-hint {
         transition: none;
     }
 
-    .mnist-card {
+    .mnist-card-visual {
         animation: none;
     }
 

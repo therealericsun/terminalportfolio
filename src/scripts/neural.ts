@@ -98,7 +98,11 @@ async function makeSamples() {
         canvas.setAttribute('aria-hidden', 'true');
         const start = sampleIndex * 28 * 28;
         drawSample(canvas, model.sampleImages.subarray(start, start + 28 * 28));
-        button.append(canvas);
+        const visual = document.createElement('span');
+        visual.className = 'mnist-card-visual';
+        visual.setAttribute('aria-hidden', 'true');
+        visual.append(canvas);
+        button.append(visual);
         samples.append(button);
         addSampleInteractions(button, canvas);
     });
@@ -110,11 +114,6 @@ function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElem
     let pointerId = -1;
     let moved = false;
     let suppressClick = false;
-
-    button.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse') button.classList.add('is-hovered');
-    });
-    button.addEventListener('pointerleave', () => button.classList.remove('is-hovered'));
 
     button.addEventListener('click', () => {
         if (suppressClick) {
@@ -132,12 +131,32 @@ function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElem
         startX = event.clientX;
         startY = event.clientY;
         moved = false;
+        suppressClick = false;
         button.setPointerCapture(pointerId);
         button.classList.add('is-dragging');
     });
 
+    const releasePointer = () => {
+        const capturedPointer = pointerId;
+        pointerId = -1;
+        if (button.hasPointerCapture(capturedPointer)) button.releasePointerCapture(capturedPointer);
+        inputTarget?.classList.remove('is-over');
+    };
+
+    const cancelDrag = () => {
+        if (pointerId === -1) return;
+        suppressClick = true;
+        releasePointer();
+        resetDraggedCard(button);
+    };
+
     button.addEventListener('pointermove', (event) => {
         if (event.pointerId !== pointerId) return;
+        // Recover if the release happened outside the window.
+        if (event.buttons === 0) {
+            cancelDrag();
+            return;
+        }
         const x = event.clientX - startX;
         const y = event.clientY - startY;
         moved ||= Math.hypot(x, y) > 4;
@@ -150,16 +169,18 @@ function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElem
 
     const finishDrag = (event: PointerEvent) => {
         if (event.pointerId !== pointerId) return;
-        pointerId = -1;
         const target = inputTarget?.getBoundingClientRect();
-        const card = button.getBoundingClientRect();
         const dropped = Boolean(target && event.clientX >= target.left - 18 && event.clientX <= target.right + 18 && event.clientY >= target.top - 18 && event.clientY <= target.bottom + 18);
-        inputTarget?.classList.remove('is-over');
+        releasePointer();
         suppressClick = moved;
 
-        if (dropped && target) {
+        // A click is handled by the click listener. Dropping an already docked
+        // card back onto its target must also clear its dragging state.
+        if (!moved || (dropped && button.classList.contains('is-docked'))) {
+            resetDraggedCard(button);
+        } else if (dropped && target) {
             void selectCard(button, canvas);
-        } else if (button.classList.contains('is-docked') && moved) {
+        } else if (button.classList.contains('is-docked')) {
             void unselectCard(button);
         } else {
             resetDraggedCard(button);
@@ -169,10 +190,9 @@ function addSampleInteractions(button: HTMLButtonElement, canvas: HTMLCanvasElem
     button.addEventListener('pointerup', finishDrag);
     button.addEventListener('pointercancel', (event) => {
         if (event.pointerId !== pointerId) return;
-        pointerId = -1;
-        inputTarget?.classList.remove('is-over');
-        resetDraggedCard(button);
+        cancelDrag();
     });
+    button.addEventListener('lostpointercapture', cancelDrag);
 }
 
 function reserveShelfSlot(button: HTMLButtonElement) {
@@ -192,7 +212,7 @@ function reserveShelfSlot(button: HTMLButtonElement) {
 function prepareFlight(button: HTMLButtonElement, bounds: DOMRect) {
     if (!neuralBackground) return;
     neuralBackground.append(button);
-    button.classList.remove('is-docked', 'is-dragging', 'is-snapping', 'is-returning', 'is-hovered');
+    button.classList.remove('is-docked', 'is-dragging', 'is-snapping', 'is-returning');
     button.classList.add('is-flight');
     button.style.setProperty('--drag-x', '0px');
     button.style.setProperty('--drag-y', '0px');
