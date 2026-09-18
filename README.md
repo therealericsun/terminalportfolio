@@ -2,7 +2,9 @@
 
 See the live website on [ericsun.net](https://ericsun.net/).
 
-A simple and lightweight terminal-style portfolio written in Astro, CSS, and TypeScript. A dark terminal sits over a faint, interactive Conway's Game of Life background, rendered with Canvas and no extra runtime dependencies.
+A simple and lightweight terminal-style portfolio written in Astro, CSS, and TypeScript. A dark terminal sits over a choice of two interactive backgrounds, rendered with Canvas and no extra runtime dependencies.
+
+Use the `bg: life / neural` switch in the upper-right corner to move between Conway's Game of Life and an illustrative MNIST neural-network view. Neural mode generates three hand-drawn 28×28 samples: drag one into the input square (or select it with the keyboard) to send its pixel-derived feature activations through the network and light up all ten digit predictions. `new samples` generates another set.
 
 The simulation and introduction stay fixed inside the viewport. Only command history
 and the input below the tips and divider scroll.

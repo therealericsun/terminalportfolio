@@ -15,6 +15,7 @@ if (canvas && context && controls) {
     let frame: number | undefined;
     let lastStep = 0;
     let hovered: { x: number; y: number } | null = null;
+    let isLifeActive = document.body.dataset.background !== 'neural';
 
     function draw() {
         if (!canvas || !context) return;
@@ -57,7 +58,7 @@ if (canvas && context && controls) {
 
     function tick(now: number) {
         frame = undefined;
-        if (speed === 0 || document.hidden) return;
+        if (speed === 0 || document.hidden || !isLifeActive) return;
         const interval = 1000 / (8 * speed);
         if (now - lastStep >= interval) {
             // No catch-up bursts after a suspended or busy tab.
@@ -72,7 +73,7 @@ if (canvas && context && controls) {
         if (frame !== undefined) cancelAnimationFrame(frame);
         frame = undefined;
         lastStep = performance.now();
-        if (speed > 0 && !document.hidden) frame = requestAnimationFrame(tick);
+        if (speed > 0 && !document.hidden && isLifeActive) frame = requestAnimationFrame(tick);
     }
 
     function setSpeed(value: number) {
@@ -125,6 +126,13 @@ if (canvas && context && controls) {
     });
     reducedMotion.addEventListener('change', (event) => {
         if (event.matches) setSpeed(0);
+    });
+    document.addEventListener('background:mode', (event) => {
+        isLifeActive = (event as CustomEvent<{ mode: string }>).detail.mode === 'life';
+        canvas.tabIndex = isLifeActive ? 0 : -1;
+        if (!isLifeActive) hovered = null;
+        draw();
+        schedule();
     });
     document.addEventListener('visibilitychange', schedule);
     window.addEventListener('pagehide', () => {

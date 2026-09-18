@@ -14,19 +14,84 @@ import '../styles/terminal.css';
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
 </head>
-<body>
+<body data-background="life">
     <canvas id="life-canvas" tabindex="0" role="application" aria-label="Conway's Game of Life" aria-describedby="life-keyboard-help"></canvas>
     <span id="life-keyboard-help" class="sr-only">Use arrow keys to choose a cell, Space or Enter to toggle it, and Escape to return to the terminal.</span>
-    <div class="life-controls" hidden>
-        <div class="life-speed" role="group" aria-label="Game of Life controls">
-            <button type="button" id="life-reset" aria-label="Reset Game of Life">reset</button>
-            <button type="button" data-life-speed="0" aria-pressed="false" aria-label="Pause Game of Life">pause</button>
-            <button type="button" data-life-speed="0.5" aria-pressed="false" aria-label="Half speed">½×</button>
-            <button type="button" data-life-speed="1" aria-pressed="true" aria-label="Normal speed">1×</button>
-            <button type="button" data-life-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
-            <button type="button" data-life-speed="4" aria-pressed="false" aria-label="Quadruple speed">4×</button>
+
+    <section id="neural-background" class="neural-background" aria-label="Interactive handwritten digit neural network" aria-hidden="true">
+        <div class="mnist-shelf">
+            <span class="network-kicker">samples / 28×28</span>
+            <div class="mnist-samples" aria-label="Handwritten digit samples"></div>
         </div>
-        <p id="life-pointer-help">click to flip cells · <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life" target="_blank" rel="noopener noreferrer">what is this?</a></p>
+
+        <div class="network-diagram" id="network-diagram">
+            <svg class="neural-links" aria-hidden="true"></svg>
+
+            <div class="network-layer input-layer">
+                <span class="layer-label">input</span>
+                <div id="neural-input" class="neural-input" aria-live="polite">
+                    <canvas width="28" height="28" aria-hidden="true"></canvas>
+                    <span>drop<br />digit</span>
+                </div>
+            </div>
+
+            <div class="network-layer feature-layer" data-layer="features">
+                <span class="layer-label">features</span>
+                <div class="node-row">
+                    {Array.from({ length: 6 }, (_, index) => (
+                        <span class="neural-node" data-node={`feature-${index}`}><i></i></span>
+                    ))}
+                </div>
+            </div>
+
+            <div class="network-layer hidden-layer" data-layer="hidden">
+                <span class="layer-label">hidden</span>
+                <div class="node-row">
+                    {Array.from({ length: 8 }, (_, index) => (
+                        <span class="neural-node neural-node-small" data-node={`hidden-${index}`}><i></i></span>
+                    ))}
+                </div>
+            </div>
+
+            <div class="network-layer output-layer" data-layer="outputs">
+                <span class="layer-label">prediction</span>
+                <div class="output-row">
+                    {Array.from({ length: 10 }, (_, digit) => (
+                        <div class="output-node" data-output={digit}>
+                            <span class="neural-node output-light"><i></i></span>
+                            <strong>{digit}</strong>
+                            <small>0%</small>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <p class="network-status" id="network-status">waiting for input<span class="status-cursor">_</span></p>
+        </div>
+    </section>
+
+    <div class="background-toolbar">
+        <div class="background-switcher" role="group" aria-label="Choose interactive background">
+            <span aria-hidden="true">bg:</span>
+            <button type="button" data-background-mode="life" aria-pressed="true">life</button>
+            <span aria-hidden="true">/</span>
+            <button type="button" data-background-mode="neural" aria-pressed="false">neural</button>
+        </div>
+        <div class="life-controls" hidden>
+            <div class="life-speed" role="group" aria-label="Game of Life controls">
+                <button type="button" id="life-reset" aria-label="Reset Game of Life">reset</button>
+                <button type="button" data-life-speed="0" aria-pressed="false" aria-label="Pause Game of Life">pause</button>
+                <button type="button" data-life-speed="0.5" aria-pressed="false" aria-label="Half speed">½×</button>
+                <button type="button" data-life-speed="1" aria-pressed="true" aria-label="Normal speed">1×</button>
+                <button type="button" data-life-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
+                <button type="button" data-life-speed="4" aria-pressed="false" aria-label="Quadruple speed">4×</button>
+            </div>
+            <p id="life-pointer-help">click to flip cells · <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life" target="_blank" rel="noopener noreferrer">what is this?</a></p>
+        </div>
+        <div class="neural-controls" hidden>
+            <button type="button" id="neural-new-samples">new samples</button>
+            <p>drag or select a digit</p>
+        </div>
     </div>
     <div class="terminal-container">
         <div id="initial-content">
@@ -92,6 +157,7 @@ import '../styles/terminal.css';
     <script>
         import '../scripts/terminal.ts';
         import '../scripts/life.ts';
+        import '../scripts/neural.ts';
     </script>
 </body>
 </html>
