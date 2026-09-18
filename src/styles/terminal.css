@@ -1021,6 +1021,10 @@ span.tab-hint {
 }
 
 @media (min-width: 1100px) {
+    .neural-background::before {
+        display: none;
+    }
+
     .terminal-container {
         width: min(
             780px,
@@ -1035,10 +1039,7 @@ span.tab-hint {
 
     .terminal-container::before {
         left: -4px;
-        width: max(
-            calc(100% + 8px),
-            calc(100vw - var(--desktop-network-backdrop-right) - clamp(480px, 40vw, 570px) - var(--desktop-terminal-left) + 4px)
-        );
+        width: calc(100vw - var(--desktop-network-backdrop-right) - var(--desktop-terminal-left) + 4px);
     }
 
     .intro-text,
