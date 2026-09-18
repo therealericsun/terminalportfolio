@@ -69,8 +69,9 @@ import '../styles/terminal.css';
                 <p class="network-output-summary" id="neural-output-summary" aria-live="polite">output: N/A</p>
             </div>
 
-            <p class="network-summary">28²→8×6²→24→10 · ReLU · 8ep Adam · tr/eval 97.4/97.4%</p>
-            <p class="network-legend">shown 8/8 conv → top 8/24 dense → 10/10 out · edges: cyan + / orange −</p>
+            <div class="node-tooltip" id="neural-node-tooltip" role="tooltip" aria-hidden="true"></div>
+
+            <p class="network-summary">28²→8×6²→8→10 · ReLU · 8ep Adam · tr/eval 92.2/93.0% · edges: cyan + / orange −</p>
             <p class="network-links">
                 <a href="https://en.wikipedia.org/wiki/Convolutional_neural_network" target="_blank" rel="noopener noreferrer">what is this?</a>
                 <span aria-hidden="true">·</span>

@@ -3,6 +3,12 @@ const diagram = document.querySelector<HTMLElement>('#network-diagram');
 const samples = document.querySelector<HTMLElement>('.mnist-samples');
 const inputTarget = document.querySelector<HTMLElement>('#neural-input');
 const links = document.querySelector<SVGSVGElement>('.neural-links');
+const nodeTooltip = document.querySelector<HTMLElement>('#neural-node-tooltip');
+
+type InspectorLayer = 'conv' | 'dense' | 'output';
+type DetailRow = { label: string; value: string; state?: 'active' | 'inactive' };
+type OutputDetail = { node: string; value: string; polarity?: 'positive' | 'negative' | 'neutral' };
+type NodeDetail = { title: string; rows: DetailRow[]; outputs?: OutputDetail[] };
 
 interface MnistModelFile {
     format: string;
@@ -45,6 +51,8 @@ let interactionLocked = false;
 const neuralReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const neuralMobile = window.matchMedia('(max-width: 768px)');
 let neuralInitialized = false;
+let inspectedNode: HTMLElement | null = null;
+const nodeDetails = new WeakMap<HTMLElement, NodeDetail>();
 
 function drawSample(canvas: HTMLCanvasElement, pixels: Uint8Array) {
     const context = canvas.getContext('2d');
@@ -432,12 +440,14 @@ function infer(canvas: HTMLCanvasElement, model: MnistModel) {
         hidden1[channel] = maximum;
     }
 
+    const hiddenSums = new Float32Array(hiddenSize);
     const hidden2 = new Float32Array(hiddenSize);
     for (let hiddenIndex = 0; hiddenIndex < hiddenSize; hiddenIndex++) {
         let value = model.denseB[hiddenIndex];
         for (let featureIndex = 0; featureIndex < pool2.values.length; featureIndex++) {
             value += pool2.values[featureIndex] * model.denseW[featureIndex * hiddenSize + hiddenIndex] * model.denseWScale;
         }
+        hiddenSums[hiddenIndex] = value;
         hidden2[hiddenIndex] = Math.max(0, value);
     }
 
@@ -452,21 +462,204 @@ function infer(canvas: HTMLCanvasElement, model: MnistModel) {
     const maximum = Math.max(...logits);
     const probabilities = Array.from(logits, (value) => Math.exp(value - maximum));
     const total = probabilities.reduce((sum, value) => sum + value, 0);
-    return { hidden1, hidden2, features: pool2.values, probabilities: probabilities.map((value) => value / total) };
+    return {
+        hidden1,
+        hidden2,
+        hiddenSums,
+        logits,
+        features: pool2.values,
+        probabilities: probabilities.map((value) => value / total)
+    };
 }
 
 function displayHiddenLayer(selector: string, values: Float32Array, label: string) {
-    const indices = Array.from(values.keys()).sort((a, b) => values[b] - values[a]).slice(0, 8);
+    const nodes = Array.from(diagram?.querySelectorAll<HTMLElement>(selector) ?? []);
+    const indices = Array.from(values.keys()).slice(0, nodes.length);
     const maximum = Math.max(...values, 0.001);
-    diagram?.querySelectorAll<HTMLElement>(selector).forEach((node, index) => {
+    nodes.forEach((node, index) => {
         const modelIndex = indices[index];
         const activation = values[modelIndex];
         node.dataset.hiddenIndex = String(modelIndex);
-        node.title = `${label} unit ${modelIndex}: ${activation.toFixed(2)}`;
-        node.setAttribute('aria-label', node.title);
+        node.setAttribute('aria-label', `${label} unit ${modelIndex + 1}, activation ${activation.toFixed(2)}`);
         node.style.setProperty('--activation', (activation / maximum).toFixed(3));
     });
     return { indices, maximum };
+}
+
+function formatSignal(value: number) {
+    const normalized = Math.abs(value) < 0.005 ? 0 : value;
+    return `${normalized >= 0 ? '+' : '−'}${Math.abs(normalized).toFixed(2)}`;
+}
+
+function setNodeDetail(node: HTMLElement, detail: NodeDetail) {
+    nodeDetails.set(node, detail);
+    const outputDescription = detail.outputs
+        ? `. Outputs: ${detail.outputs.map((output) => `${output.node} ${output.value}`).join(', ')}`
+        : '';
+    node.setAttribute('aria-label', `${detail.title}. ${detail.rows.map((row) => `${row.label}: ${row.value}`).join('. ')}${outputDescription}`);
+    if (inspectedNode === node) renderNodeTooltip(node);
+}
+
+function resetNodeDetails() {
+    diagram?.querySelectorAll<HTMLElement>('[data-node^="hidden1-"]').forEach((node, index) => {
+        setNodeDetail(node, {
+            title: `CONV CHANNEL ${index + 1}`,
+            rows: [
+                { label: 'Σ pooled signal', value: '—' },
+                { label: 'state', value: 'waiting for input', state: 'inactive' }
+            ],
+            outputs: Array.from({ length: 8 }, (_, output) => ({ node: `H${output + 1}`, value: '—', polarity: 'neutral' }))
+        });
+    });
+    diagram?.querySelectorAll<HTMLElement>('[data-node^="hidden2-"]').forEach((node, index) => {
+        setNodeDetail(node, {
+            title: `DENSE NODE ${index + 1}`,
+            rows: [
+                { label: 'Σ weighted input', value: '—' },
+                { label: 'state', value: 'waiting for input', state: 'inactive' }
+            ],
+            outputs: Array.from({ length: 10 }, (_, output) => ({ node: String(output), value: '—', polarity: 'neutral' }))
+        });
+    });
+    diagram?.querySelectorAll<HTMLElement>('[data-output] .neural-node').forEach((node) => {
+        const digit = Number(node.closest<HTMLElement>('[data-output]')?.dataset.output);
+        setNodeDetail(node, {
+            title: `OUTPUT / DIGIT ${digit}`,
+            rows: [
+                { label: 'Σ weighted input', value: '—' },
+                { label: 'state', value: 'waiting for input', state: 'inactive' },
+                { label: 'probability', value: '0%' }
+            ]
+        });
+    });
+}
+
+function placeNodeTooltip(node: HTMLElement) {
+    if (!diagram || !nodeTooltip || inspectedNode !== node) return;
+    const bounds = diagram.getBoundingClientRect();
+    const nodeBounds = node.getBoundingClientRect();
+    const tooltipWidth = nodeTooltip.offsetWidth;
+    const tooltipHeight = nodeTooltip.offsetHeight;
+    const center = nodeBounds.left - bounds.left + nodeBounds.width / 2;
+    const left = Math.min(bounds.width - tooltipWidth - 4, Math.max(4, center - tooltipWidth / 2));
+    const above = nodeBounds.top - bounds.top - tooltipHeight - 11;
+    const below = nodeBounds.bottom - bounds.top + 11;
+    const maximumTop = Math.max(4, bounds.height - tooltipHeight - 4);
+    const placeBelow = above < 4;
+    const top = Math.min(maximumTop, Math.max(4, placeBelow ? below : above));
+    nodeTooltip.style.left = `${left}px`;
+    nodeTooltip.style.top = `${top}px`;
+    nodeTooltip.dataset.placement = placeBelow ? 'below' : 'above';
+}
+
+function renderNodeTooltip(node: HTMLElement) {
+    if (!nodeTooltip) return;
+    const detail = nodeDetails.get(node);
+    if (!detail) return;
+    nodeTooltip.classList.toggle('is-compact', !detail.outputs);
+    nodeTooltip.classList.toggle('is-medium', detail.outputs?.length === 8);
+    const heading = document.createElement('strong');
+    heading.className = 'node-tooltip-title';
+    heading.textContent = `[ ${detail.title} ]`;
+    const rows = document.createElement('dl');
+    detail.rows.forEach((row) => {
+        const wrapper = document.createElement('div');
+        const label = document.createElement('dt');
+        const value = document.createElement('dd');
+        label.textContent = row.label;
+        value.textContent = row.value;
+        if (row.state) value.classList.add(`is-${row.state}`);
+        wrapper.append(label, value);
+        rows.append(wrapper);
+    });
+    nodeTooltip.replaceChildren(heading, rows);
+    if (detail.outputs) {
+        const outputSection = document.createElement('div');
+        outputSection.className = 'node-tooltip-outputs';
+        const outputTitle = document.createElement('span');
+        outputTitle.textContent = 'outputs';
+        const table = document.createElement('table');
+        const header = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const nodeHeader = document.createElement('th');
+        nodeHeader.textContent = 'dest';
+        headerRow.append(nodeHeader);
+        detail.outputs.forEach((output) => {
+            const target = document.createElement('th');
+            target.scope = 'col';
+            target.textContent = output.node;
+            headerRow.append(target);
+        });
+        header.append(headerRow);
+        const body = document.createElement('tbody');
+        const signalRow = document.createElement('tr');
+        const signalHeader = document.createElement('th');
+        signalHeader.scope = 'row';
+        signalHeader.textContent = 'signal';
+        signalRow.append(signalHeader);
+        detail.outputs.forEach((output) => {
+            const value = document.createElement('td');
+            value.textContent = output.value;
+            if (output.polarity) value.classList.add(`is-${output.polarity}`);
+            signalRow.append(value);
+        });
+        body.append(signalRow);
+        table.append(header, body);
+        outputSection.append(outputTitle, table);
+        nodeTooltip.append(outputSection);
+    }
+    nodeTooltip.setAttribute('aria-hidden', 'false');
+    nodeTooltip.classList.add('is-visible');
+    requestAnimationFrame(() => placeNodeTooltip(node));
+}
+
+function connectionMatchesNode(line: SVGLineElement, layer: InspectorLayer, index: number) {
+    const group = line.dataset.group;
+    const source = Number(line.dataset.source);
+    const target = Number(line.dataset.target);
+    if (layer === 'conv') return (group === 'input' && target === index) || (group === 'hidden' && source === index);
+    if (layer === 'dense') return (group === 'hidden' && target === index) || (group === 'output' && source === index);
+    return group === 'output' && target === index;
+}
+
+function showNodeInspector(node: HTMLElement) {
+    if (!diagram || !nodeTooltip) return;
+    inspectedNode?.classList.remove('is-inspected-node');
+    inspectedNode = node;
+    node.classList.add('is-inspected-node');
+    diagram.classList.add('has-node-inspection');
+    const layer = node.dataset.inspectorLayer as InspectorLayer;
+    const index = Number(node.dataset.inspectorIndex);
+    links?.querySelectorAll<SVGLineElement>('line').forEach((line) => {
+        line.classList.toggle('is-inspected', connectionMatchesNode(line, layer, index));
+    });
+    renderNodeTooltip(node);
+}
+
+function hideNodeInspector(node: HTMLElement) {
+    if (!diagram || !nodeTooltip || inspectedNode !== node) return;
+    node.classList.remove('is-inspected-node');
+    inspectedNode = null;
+    diagram.classList.remove('has-node-inspection');
+    links?.querySelectorAll('.is-inspected').forEach((line) => line.classList.remove('is-inspected'));
+    nodeTooltip.classList.remove('is-visible');
+    nodeTooltip.setAttribute('aria-hidden', 'true');
+}
+
+function initializeNodeInspector() {
+    const register = (node: HTMLElement, layer: InspectorLayer, index: number) => {
+        node.dataset.inspectorLayer = layer;
+        node.dataset.inspectorIndex = String(index);
+        node.tabIndex = 0;
+        node.addEventListener('pointerenter', () => showNodeInspector(node));
+        node.addEventListener('pointerleave', () => hideNodeInspector(node));
+        node.addEventListener('focus', () => showNodeInspector(node));
+        node.addEventListener('blur', () => hideNodeInspector(node));
+    };
+    diagram?.querySelectorAll<HTMLElement>('[data-node^="hidden1-"]').forEach((node, index) => register(node, 'conv', index));
+    diagram?.querySelectorAll<HTMLElement>('[data-node^="hidden2-"]').forEach((node, index) => register(node, 'dense', index));
+    diagram?.querySelectorAll<HTMLElement>('[data-output] .neural-node').forEach((node, index) => register(node, 'output', index));
+    resetNodeDetails();
 }
 
 async function loadDigit(source: HTMLCanvasElement) {
@@ -474,7 +667,7 @@ async function loadDigit(source: HTMLCanvasElement) {
 
     const model = await modelPromise;
     if (!model) return;
-    const { hidden1, hidden2, features, probabilities } = infer(source, model);
+    const { hidden1, hidden2, hiddenSums, logits, features, probabilities } = infer(source, model);
     const prediction = probabilities.indexOf(Math.max(...probabilities));
     const outputSummary = diagram.querySelector<HTMLElement>('#neural-output-summary');
     if (outputSummary) {
@@ -492,12 +685,14 @@ async function loadDigit(source: HTMLCanvasElement) {
         node.style.setProperty('--activation', Math.min(1, probabilities[index] * 1.45 + 0.06).toFixed(3));
     });
 
-    document.querySelectorAll<HTMLElement>('[data-output]').forEach((output, index) => {
+    diagram.querySelectorAll<HTMLElement>('[data-output]').forEach((output, index) => {
         output.classList.toggle('is-prediction', index === prediction);
         const value = output.querySelector<HTMLElement>('small');
         if (value) value.textContent = `${Math.round(probabilities[index] * 100)}%`;
     });
 
+    const hiddenContributions = Array.from({ length: hidden1Display.indices.length }, () => Array(hidden2Display.indices.length).fill(0));
+    const outputContributions = Array.from({ length: hidden2Display.indices.length }, () => Array(model.architecture.output).fill(0));
     const maximumContribution = { hidden: 0, output: 0 };
     links?.querySelectorAll<SVGLineElement>('line[data-group="hidden"], line[data-group="output"]').forEach((line) => {
         const sourceIndex = Number(line.dataset.source);
@@ -512,11 +707,13 @@ async function loadDigit(source: HTMLCanvasElement) {
                     * model.denseW[featureIndex * model.architecture.hidden + targetModelIndex]
                     * model.denseWScale;
             }
+            hiddenContributions[sourceIndex][targetIndex] = contribution;
         } else {
             const sourceModelIndex = hidden2Display.indices[sourceIndex];
             contribution = hidden2[sourceModelIndex]
                 * model.outputW[sourceModelIndex * model.architecture.output + targetIndex]
                 * model.outputWScale;
+            outputContributions[sourceIndex][targetIndex] = contribution;
         }
         line.dataset.contribution = String(contribution);
         const group = line.dataset.group as 'hidden' | 'output';
@@ -532,6 +729,56 @@ async function loadDigit(source: HTMLCanvasElement) {
         const group = line.dataset.group as 'hidden' | 'output';
         line.classList.toggle('is-inhibitory', contribution < 0);
         line.style.setProperty('--activation', (Math.abs(contribution) / Math.max(maximumContribution[group], 0.001)).toFixed(3));
+    });
+
+    diagram.querySelectorAll<HTMLElement>('[data-node^="hidden1-"]').forEach((node, displayIndex) => {
+        const modelIndex = hidden1Display.indices[displayIndex];
+        let pooledSignal = 0;
+        for (let position = 0; position < 6 * 6; position++) {
+            pooledSignal += features[position * model.architecture.convChannels + modelIndex];
+        }
+        const active = hidden1[modelIndex] > 0.001;
+        setNodeDetail(node, {
+            title: `CONV CHANNEL ${modelIndex + 1}`,
+            rows: [
+                { label: 'Σ pooled signal', value: formatSignal(pooledSignal) },
+                { label: 'state', value: active ? 'activated' : 'not activated', state: active ? 'active' : 'inactive' },
+                { label: 'peak activation', value: hidden1[modelIndex].toFixed(3) }
+            ],
+            outputs: hiddenContributions[displayIndex].map((value, output) => ({
+                node: `H${output + 1}`,
+                value: formatSignal(value),
+                polarity: value > 0.005 ? 'positive' : value < -0.005 ? 'negative' : 'neutral'
+            }))
+        });
+    });
+    diagram.querySelectorAll<HTMLElement>('[data-node^="hidden2-"]').forEach((node, displayIndex) => {
+        const modelIndex = hidden2Display.indices[displayIndex];
+        const active = hidden2[modelIndex] > 0.001;
+        setNodeDetail(node, {
+            title: `DENSE NODE ${modelIndex + 1}`,
+            rows: [
+                { label: 'Σ weighted input', value: formatSignal(hiddenSums[modelIndex]) },
+                { label: 'state', value: active ? 'activated' : 'not activated', state: active ? 'active' : 'inactive' },
+                { label: 'ReLU output', value: hidden2[modelIndex].toFixed(3) }
+            ],
+            outputs: outputContributions[displayIndex].map((value, output) => ({
+                node: String(output),
+                value: formatSignal(value),
+                polarity: value > 0.005 ? 'positive' : value < -0.005 ? 'negative' : 'neutral'
+            }))
+        });
+    });
+    diagram.querySelectorAll<HTMLElement>('[data-output] .neural-node').forEach((node, digit) => {
+        const selected = digit === prediction;
+        setNodeDetail(node, {
+            title: `OUTPUT / DIGIT ${digit}`,
+            rows: [
+                { label: 'Σ weighted input', value: formatSignal(logits[digit]) },
+                { label: 'state', value: selected ? 'selected' : 'not selected', state: selected ? 'active' : 'inactive' },
+                { label: 'probability', value: `${(probabilities[digit] * 100).toFixed(2)}%` }
+            ]
+        });
     });
 
     diagram.classList.remove('has-result');
@@ -555,11 +802,13 @@ function resetNetworkVisual() {
         line.classList.remove('is-inhibitory');
         delete line.dataset.contribution;
     });
+    resetNodeDetails();
 }
 
 function initializeNeuralNetwork() {
     if (neuralInitialized || neuralMobile.matches || !neuralBackground || !diagram || !samples || !inputTarget || !links) return;
     neuralInitialized = true;
+    initializeNodeInspector();
     modelPromise = loadModel().catch(() => null);
     makeSamples();
     document.querySelector<HTMLButtonElement>('#neural-refresh-samples')?.addEventListener('click', makeSamples);

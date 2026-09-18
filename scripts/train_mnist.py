@@ -277,7 +277,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", type=Path, default=Path("/private/tmp/terminalportfolio-mnist"))
     parser.add_argument("--output", type=Path, default=Path("public/mnist-model.json"))
     parser.add_argument("--channels", type=int, default=8)
-    parser.add_argument("--hidden", type=int, default=24)
+    parser.add_argument("--hidden", type=int, default=8)
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--learning-rate", type=float, default=0.0015)
