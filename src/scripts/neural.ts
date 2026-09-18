@@ -476,6 +476,16 @@ async function loadDigit(source: HTMLCanvasElement) {
     if (!model) return;
     const { hidden1, hidden2, features, probabilities } = infer(source, model);
     const prediction = probabilities.indexOf(Math.max(...probabilities));
+    const outputSummary = diagram.querySelector<HTMLElement>('#neural-output-summary');
+    if (outputSummary) {
+        const predictionValue = document.createElement('span');
+        predictionValue.className = 'network-output-value';
+        predictionValue.textContent = String(prediction);
+        const certaintyValue = document.createElement('span');
+        certaintyValue.className = 'network-output-value';
+        certaintyValue.textContent = `${Math.round(probabilities[prediction] * 100)}%`;
+        outputSummary.replaceChildren('output: ', predictionValue, ' with ', certaintyValue, ' certainty');
+    }
     const hidden1Display = displayHiddenLayer('[data-node^="hidden1-"]', hidden1, 'Convolution channel');
     const hidden2Display = displayHiddenLayer('[data-node^="hidden2-"]', hidden2, 'Dense layer');
     diagram.querySelectorAll<HTMLElement>('[data-output] .neural-node').forEach((node, index) => {
@@ -530,6 +540,8 @@ async function loadDigit(source: HTMLCanvasElement) {
 
 function resetNetworkVisual() {
     diagram?.classList.remove('has-result');
+    const outputSummary = diagram?.querySelector<HTMLElement>('#neural-output-summary');
+    if (outputSummary) outputSummary.textContent = 'output: N/A';
     diagram?.querySelectorAll<HTMLElement>('.neural-node').forEach((node) => {
         node.style.setProperty('--activation', '0');
     });

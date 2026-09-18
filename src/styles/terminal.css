@@ -598,6 +598,57 @@ span.tab-hint {
 .hidden-layer-two { top: 46%; }
 .output-layer { top: 66%; }
 
+.neural-input-hint {
+    position: absolute;
+    top: 50%;
+    left: calc(50% + 34px);
+    transform: translateY(-50%);
+    margin: 0;
+    color: rgba(231, 236, 239, 0.55);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.network-annotation {
+    color: rgba(231, 236, 239, 0.55);
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.network-hidden-annotation {
+    position: absolute;
+    top: 26%;
+    left: calc(85% + 8px);
+    height: calc(20% + 18px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.network-vertical-bracket {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    white-space: pre;
+}
+
+.network-hidden-label { line-height: 1.2; }
+
+.network-output-summary {
+    margin: 9px 0 0;
+    color: rgba(231, 236, 239, 0.55);
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.network-output-value { color: var(--secondary-color); }
+
 .neural-input {
     position: relative;
     width: 48px;
@@ -652,7 +703,7 @@ span.tab-hint {
 
 .node-row,
 .output-row {
-    width: 82%;
+    width: 70%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -733,13 +784,13 @@ span.tab-hint {
 .network-summary {
     position: absolute;
     left: 50%;
-    bottom: 10%;
+    bottom: 6%;
     transform: translateX(-50%);
     width: max-content;
     max-width: calc(100vw - 20px);
     margin: 0;
     color: rgba(231, 236, 239, 0.45);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.2;
     letter-spacing: 0.025em;
     white-space: nowrap;
@@ -748,7 +799,7 @@ span.tab-hint {
 .network-legend {
     position: absolute;
     left: 50%;
-    bottom: 5%;
+    bottom: 3%;
     width: max-content;
     max-width: calc(100vw - 20px);
     margin: 0;

@@ -29,7 +29,8 @@ import '../styles/terminal.css';
             <svg class="neural-links" aria-hidden="true"></svg>
 
             <div class="network-layer input-layer">
-                <div id="neural-input" class="neural-input" aria-label="Digit input drop target"></div>
+                <div id="neural-input" class="neural-input" aria-label="Digit input drop target" aria-describedby="neural-input-instruction"></div>
+                <p class="neural-input-hint" id="neural-input-instruction"><span aria-hidden="true">&lt;== </span>drag input here</p>
             </div>
 
             <div class="network-layer hidden-layer-one" data-layer="hidden-1">
@@ -48,6 +49,13 @@ import '../styles/terminal.css';
                 </div>
             </div>
 
+            <div class="network-hidden-annotation network-annotation">
+                <span class="network-vertical-bracket" aria-hidden="true">
+                    {['-+', ' |', ' |', ' |', ' |', ' |', '-+'].map((line) => <span>{line}</span>)}
+                </span>
+                <span class="network-hidden-label">hidden<br />layers</span>
+            </div>
+
             <div class="network-layer output-layer" data-layer="outputs">
                 <div class="output-row">
                     {Array.from({ length: 10 }, (_, digit) => (
@@ -58,6 +66,7 @@ import '../styles/terminal.css';
                         </div>
                     ))}
                 </div>
+                <p class="network-output-summary" id="neural-output-summary" aria-live="polite">output: N/A</p>
             </div>
 
             <p class="network-summary">28²→8×6²→24→10 · ReLU · 8ep Adam · tr/eval 97.4/97.4%</p>
