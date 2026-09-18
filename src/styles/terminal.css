@@ -269,6 +269,10 @@ a:hover {
     text-decoration: underline;
 }
 
+.link-bracket {
+    color: rgba(78, 179, 181, 0.72);
+}
+
 .ascii-name {
     display: flex;
     align-items: flex-start;
