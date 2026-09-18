@@ -566,10 +566,12 @@ span.tab-hint {
 
 .neural-links {
     position: absolute;
+    z-index: 0;
     inset: 0;
     width: 100%;
     height: 100%;
     overflow: visible;
+    pointer-events: none;
 }
 
 .neural-links line {
@@ -598,6 +600,7 @@ span.tab-hint {
 
 .network-layer {
     position: absolute;
+    z-index: 1;
     left: 0;
     width: 100%;
     display: flex;
@@ -988,6 +991,139 @@ span.tab-hint {
     color: var(--link-hover-color) !important;
     border-bottom-color: currentColor;
     outline: none;
+}
+
+/* One-shot terminal boot sequence. */
+@media (prefers-reduced-motion: no-preference) {
+    #life-canvas {
+        animation: boot-life 1100ms steps(12, end) backwards;
+    }
+
+    .terminal-container::before,
+    .neural-background::before {
+        animation: boot-surface 520ms steps(8, end) 80ms backwards;
+    }
+
+    .ascii-letter {
+        animation: boot-glyph 300ms steps(6, end) backwards;
+    }
+
+    .ascii-art-eric .ascii-letter:nth-child(1) { animation-delay: 110ms; }
+    .ascii-art-eric .ascii-letter:nth-child(2) { animation-delay: 170ms; }
+    .ascii-art-eric .ascii-letter:nth-child(3) { animation-delay: 230ms; }
+    .ascii-art-eric .ascii-letter:nth-child(4) { animation-delay: 290ms; }
+    .ascii-art-sun .ascii-letter:nth-child(1) { animation-delay: 350ms; }
+    .ascii-art-sun .ascii-letter:nth-child(2) { animation-delay: 410ms; }
+    .ascii-art-sun .ascii-letter:nth-child(3) { animation-delay: 470ms; }
+
+    #initial-content > :not(.ascii-name),
+    .terminal-scroll {
+        animation: boot-line 260ms steps(7, end) backwards;
+    }
+
+    #initial-content > :nth-child(2) { animation-delay: 390ms; }
+    #initial-content > :nth-child(3) { animation-delay: 440ms; }
+    #initial-content > :nth-child(4) { animation-delay: 500ms; }
+    #initial-content > :nth-child(5) { animation-delay: 560ms; }
+    #initial-content > :nth-child(6) { animation-delay: 620ms; }
+    #initial-content > :nth-child(7) { animation-delay: 680ms; }
+    #initial-content > :nth-child(8) { animation-delay: 740ms; }
+    .terminal-scroll { animation-delay: 800ms; }
+
+    .mnist-shelf,
+    .network-summary,
+    .network-links {
+        animation: boot-network-fade 320ms steps(7, end) backwards;
+    }
+
+    .network-layer,
+    .network-hidden-annotation {
+        animation: boot-network-layer 320ms steps(7, end) backwards;
+    }
+
+    .mnist-shelf { animation-delay: 280ms; }
+    .input-layer { animation-delay: 430ms; }
+    .hidden-layer-one { animation-delay: 570ms; }
+    .network-hidden-annotation { animation-delay: 640ms; }
+    .hidden-layer-two { animation-delay: 710ms; }
+    .output-layer { animation-delay: 850ms; }
+    .network-summary { animation-delay: 990ms; }
+    .network-links { animation-delay: 1060ms; }
+
+    .neural-links line {
+        animation: boot-signal 480ms steps(10, end) backwards;
+    }
+
+    .neural-links line[data-group='input'] { animation-delay: 480ms; }
+    .neural-links line[data-group='hidden'] { animation-delay: 650ms; }
+    .neural-links line[data-group='output'] { animation-delay: 810ms; }
+}
+
+@keyframes boot-life {
+    from { opacity: 0; }
+    to { opacity: 0.1; }
+}
+
+@keyframes boot-surface {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes boot-glyph {
+    from {
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        filter: blur(2px);
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        clip-path: inset(0);
+        filter: blur(0);
+        transform: translateY(0);
+    }
+}
+
+@keyframes boot-line {
+    from {
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        transform: translateX(-4px);
+    }
+    to {
+        opacity: 1;
+        clip-path: inset(0);
+        transform: translateX(0);
+    }
+}
+
+@keyframes boot-network-layer {
+    from {
+        opacity: 0;
+        clip-path: inset(0 50%);
+        filter: blur(2px);
+    }
+    to {
+        opacity: 1;
+        clip-path: inset(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes boot-network-fade {
+    from {
+        opacity: 0;
+        filter: blur(2px);
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+@keyframes boot-signal {
+    from { stroke-dashoffset: 24; }
+    to { stroke-dashoffset: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
