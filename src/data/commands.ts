@@ -61,7 +61,7 @@ export const educationContent = `<div class="panel-box">` +
     `<span class="tab-hint">August 2023 - May 2027 · Philadelphia, Pennsylvania</span>` +
     `<div class="education-degrees">` +
     `<div class="education-degree"><span>M.S.&nbsp;</span><span>Physics, <em>Submatriculant (Joint B.A./M.S.)</em></span></div>` +
-    `<div class="education-degree"><span>B.A.&nbsp;</span><span>Physics (Hons.), <em>Concentration in Computational Techniques</em></span></div>` +
+    `<div class="education-degree"><span>B.A.&nbsp;</span><span>Physics, <em>Conc. in Computational Techniques</em></span></div>` +
     `<div class="education-degree"><span>B.S.E.&nbsp;</span><span>Computer Science<span class="education-minor">Minor in Mathematics</span></span></div>` +
     `</div>` +
     `<div class="education-detail">GPA: 3.94 / 4.00<span class="education-program">Vagelos Integrated Program in Energy Research (VIPER)</span></div></div></div>`;
