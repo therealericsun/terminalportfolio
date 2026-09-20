@@ -338,8 +338,10 @@ document.addEventListener('click', (event) => {
 type ViewMode = 'terminal' | 'list';
 const viewModeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-view-mode]'));
 const finePointer = window.matchMedia('(pointer: fine)');
+const mobileView = window.matchMedia('(max-width: 768px)');
 
 function setViewMode(mode: ViewMode, focusTerminal = false) {
+    if (mobileView.matches) mode = 'list';
     document.documentElement.dataset.viewMode = mode;
     viewModeButtons.forEach((button) => {
         button.setAttribute('aria-pressed', String(button.dataset.viewMode === mode));
@@ -353,6 +355,7 @@ function setViewMode(mode: ViewMode, focusTerminal = false) {
 
 viewModeButtons.forEach((button) => {
     button.addEventListener('click', () => {
+        if (mobileView.matches) return;
         const mode = button.dataset.viewMode as ViewMode;
         if (document.documentElement.dataset.viewMode === mode) return;
 
@@ -365,6 +368,10 @@ viewModeButtons.forEach((button) => {
 
 const initialViewMode: ViewMode = document.documentElement.dataset.viewMode === 'terminal' ? 'terminal' : 'list';
 setViewMode(initialViewMode, initialViewMode === 'terminal');
+
+mobileView.addEventListener('change', (event) => {
+    if (event.matches) setViewMode('list');
+});
 
 // Auto-update copyright year
 const yearElement = document.getElementById('current-year');
