@@ -66,13 +66,14 @@ body {
 }
 
 #life-canvas {
+    --life-opacity: 0.16;
     position: fixed;
     inset: 0;
     width: 100%;
     height: 100%;
     z-index: -1;
     pointer-events: none;
-    opacity: 0.1;
+    opacity: var(--life-opacity);
 }
 
 .sr-only {
@@ -273,6 +274,93 @@ a:hover {
     color: rgba(78, 179, 181, 0.72);
 }
 
+.intro-actions {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 5px 1.5ch;
+}
+
+.contact-links {
+    min-width: 0;
+}
+
+.view-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 4px;
+    color: rgba(231, 236, 239, 0.42);
+    font-size: 0.78em;
+    line-height: 1.5;
+    white-space: nowrap;
+    background: rgba(17, 19, 26, 0.42);
+    border: 1px solid rgba(231, 236, 239, 0.14);
+    border-radius: 2px;
+}
+
+.view-mode-label {
+    color: rgba(231, 236, 239, 0.48);
+}
+
+.view-mode-toggle button {
+    padding: 0 3px;
+    color: rgba(231, 236, 239, 0.48);
+    font: inherit;
+    line-height: inherit;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.view-mode-toggle button:hover,
+.view-mode-toggle button:focus-visible {
+    color: var(--link-hover-color);
+    outline: none;
+}
+
+.view-mode-toggle button[aria-pressed='true'] {
+    color: var(--secondary-color);
+    background: rgba(78, 179, 181, 0.1);
+    box-shadow: inset 0 -1px 0 rgba(78, 179, 181, 0.52);
+}
+
+.list-view-only {
+    display: none;
+}
+
+html[data-view-mode='list'] .terminal-view-only {
+    display: none !important;
+}
+
+html[data-view-mode='list'] .list-view-only {
+    display: block;
+}
+
+.list-view {
+    margin-top: 8px;
+}
+
+.list-heading {
+    margin: 14px 0 4px;
+    padding-bottom: 4px;
+    color: var(--secondary-color);
+    font-size: 1.1em;
+    font-weight: 500;
+    line-height: 1.3;
+    border-bottom: 1px solid rgba(78, 179, 181, 0.34);
+}
+
+@media (max-width: 768px) {
+    html:not([data-view-mode]) .terminal-view-only {
+        display: none !important;
+    }
+
+    html:not([data-view-mode]) .list-view-only {
+        display: block;
+    }
+}
+
 .ascii-name {
     display: flex;
     align-items: flex-start;
@@ -357,14 +445,104 @@ span.tab-hint {
 }
 
 .panel-box {
-    border: 1px solid var(--text-color);
+    position: relative;
+    border: 1px solid rgba(231, 236, 239, 0.24);
     padding: 15px;
     margin-top: 15px;
     margin-bottom: 15px;
-    background-color: rgba(231, 236, 239, 0.07);
+    background:
+        repeating-linear-gradient(0deg, rgba(78, 179, 181, 0.022) 0 1px, transparent 1px 4px),
+        rgba(17, 19, 26, 0.5);
     border-radius: 2px;
     max-width: 900px;
     line-height: 1.4;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(78, 179, 181, 0.025);
+    transition: border-color 140ms steps(3, end), box-shadow 140ms steps(3, end), transform 140ms steps(3, end), background-color 140ms steps(3, end);
+}
+
+.panel-box::before,
+.panel-box::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-color: rgba(78, 179, 181, 0.7);
+    pointer-events: none;
+}
+
+.panel-box::before {
+    top: -2px;
+    left: -2px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+}
+
+.panel-box::after {
+    right: -2px;
+    bottom: -2px;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+}
+
+.experience-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+}
+
+.experience-copy {
+    min-width: 0;
+}
+
+.experience-logo {
+    display: block;
+    width: 82px;
+    height: 82px;
+    object-fit: cover;
+    border: 1px solid rgba(231, 236, 239, 0.1);
+    border-radius: 2px;
+    user-select: none;
+    opacity: 0.88;
+    filter: saturate(0.82) contrast(0.96);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.education-degrees {
+    display: grid;
+    grid-template-columns: 6ch minmax(0, 1fr);
+    column-gap: 0.75ch;
+    margin-top: 5px;
+}
+
+.education-degree {
+    display: contents;
+}
+
+.education-degree > span:first-child {
+    white-space: nowrap;
+}
+
+.education-minor {
+    display: block;
+}
+
+.education-detail {
+    margin-top: 5px;
+}
+
+.education-program {
+    display: block;
+}
+
+@media (any-hover: hover) and (any-pointer: fine) {
+    .panel-box:hover,
+    .panel-box:focus-within {
+        border-color: rgba(78, 179, 181, 0.52);
+        background-color: rgba(17, 19, 26, 0.68);
+        box-shadow: 4px 4px 0 rgba(78, 179, 181, 0.12), 0 0 14px rgba(78, 179, 181, 0.09), inset 0 0 0 1px rgba(78, 179, 181, 0.045);
+        transform: translate(-1px, -1px);
+    }
 }
 
 .intro-text {
@@ -374,6 +552,10 @@ span.tab-hint {
 
 /* MNIST neural-network background */
 .neural-background {
+    --network-width: clamp(440px, 38vw, 530px);
+    --network-height: max(380px, min(500px, calc(100dvh - 200px)));
+    /* Center the window body, excluding the 30px title bar. */
+    --network-top: max(20px, calc((100dvh - var(--network-height) - 165px) / 2 - 15px));
     position: fixed;
     inset: 0;
     z-index: 3;
@@ -402,12 +584,77 @@ span.tab-hint {
     background: rgba(33, 35, 44, 0.68);
 }
 
+.neural-window {
+    position: absolute;
+    top: var(--network-top);
+    right: calc(var(--desktop-network-right) - 18px);
+    width: calc(var(--network-width) + 36px);
+    height: calc(var(--network-height) + 165px);
+    border: 1px solid rgba(78, 179, 181, 0.28);
+    border-radius: 3px;
+    background: rgba(33, 35, 44, 0.24);
+    box-shadow: 4px 4px 0 rgba(17, 19, 26, 0.22), inset 0 0 0 1px rgba(231, 236, 239, 0.025);
+    pointer-events: none;
+}
+
+.neural-window::before,
+.neural-window::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: var(--secondary-color);
+    opacity: 0.65;
+}
+
+.neural-window::before {
+    top: -1px;
+    left: -1px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+}
+
+.neural-window::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+}
+
+.neural-window-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 30px;
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(78, 179, 181, 0.18);
+    background: rgba(78, 179, 181, 0.045);
+    color: rgba(231, 236, 239, 0.5);
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+}
+
+.neural-window-mark {
+    color: var(--secondary-color);
+}
+
+.neural-window-rule {
+    flex: 1;
+    border-top: 1px dotted rgba(78, 179, 181, 0.22);
+}
+
+.neural-window-controls {
+    color: rgba(231, 236, 239, 0.32);
+    white-space: pre;
+}
+
 .mnist-shelf {
     position: absolute;
     z-index: 1;
-    top: 98px;
+    top: calc(var(--network-top) + 60px);
     right: var(--desktop-network-right);
-    width: clamp(440px, 38vw, 530px);
+    width: var(--network-width);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -561,11 +808,10 @@ span.tab-hint {
 .network-diagram {
     position: absolute;
     z-index: 1;
-    top: 195px;
+    top: calc(var(--network-top) + 145px);
     right: var(--desktop-network-right);
-    width: clamp(440px, 38vw, 530px);
-    height: min(500px, calc(100dvh - 200px));
-    min-height: 380px;
+    width: var(--network-width);
+    height: var(--network-height);
 }
 
 .neural-links {
@@ -957,13 +1203,14 @@ span.tab-hint {
     bottom: 4%;
     transform: translateX(-50%);
     width: max-content;
-    max-width: calc(100vw - 20px);
+    max-width: 100%;
     margin: 0;
     color: rgba(231, 236, 239, 0.45);
     font-size: 11px;
     line-height: 1.2;
     letter-spacing: 0.025em;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
 }
 
 .network-links {
@@ -1004,7 +1251,8 @@ span.tab-hint {
     }
 
     .terminal-container::before,
-    .neural-background::before {
+    .neural-background::before,
+    .neural-window {
         animation: boot-surface 520ms steps(8, end) 80ms backwards;
     }
 
@@ -1032,6 +1280,7 @@ span.tab-hint {
     #initial-content > :nth-child(6) { animation-delay: 620ms; }
     #initial-content > :nth-child(7) { animation-delay: 680ms; }
     #initial-content > :nth-child(8) { animation-delay: 740ms; }
+    #initial-content > :nth-child(9) { animation-delay: 620ms; }
     .terminal-scroll { animation-delay: 800ms; }
 
     .mnist-shelf,
@@ -1061,11 +1310,19 @@ span.tab-hint {
     .neural-links line[data-group='input'] { animation-delay: 480ms; }
     .neural-links line[data-group='hidden'] { animation-delay: 650ms; }
     .neural-links line[data-group='output'] { animation-delay: 810ms; }
+
+    /* Persist after switching so the delayed boot animation cannot restart.
+       display:none resets this reveal naturally whenever a view is hidden. */
+    html.view-switched #initial-content > .terminal-view-only,
+    html.view-switched .terminal-scroll.terminal-view-only,
+    html.view-switched .list-view {
+        animation: view-mode-reveal 180ms steps(5, end) both;
+    }
 }
 
 @keyframes boot-life {
     from { opacity: 0; }
-    to { opacity: 0.1; }
+    to { opacity: var(--life-opacity); }
 }
 
 @keyframes boot-surface {
@@ -1098,6 +1355,17 @@ span.tab-hint {
         opacity: 1;
         clip-path: inset(0);
         transform: translateX(0);
+    }
+}
+
+@keyframes view-mode-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -1144,7 +1412,8 @@ span.tab-hint {
     .neural-node,
     .neural-node i,
     .output-node,
-    .node-tooltip {
+    .node-tooltip,
+    .panel-box {
         transition: none;
     }
 }
@@ -1168,7 +1437,7 @@ span.tab-hint {
     .terminal-container {
         width: min(
             780px,
-            calc(100vw - var(--desktop-terminal-left) - var(--desktop-network-right) - clamp(440px, 38vw, 530px) - 26px)
+            calc(100vw - var(--desktop-terminal-left) - var(--desktop-network-right) - clamp(440px, 38vw, 530px) - 80px)
         );
         max-width: none;
         margin-right: 0;
@@ -1190,6 +1459,9 @@ span.tab-hint {
 
 @media (min-width: 769px) and (max-width: 1099px) {
     .neural-background {
+        --network-width: min(530px, calc(100% - 40px));
+        --network-height: 390px;
+        --network-top: 50px;
         position: absolute;
         height: 610px;
     }
@@ -1211,13 +1483,14 @@ span.tab-hint {
     .network-diagram {
         right: auto;
         left: 50%;
-        width: min(530px, calc(100% - 40px));
+        width: var(--network-width);
         transform: translateX(-50%);
     }
 
-    .network-diagram {
-        height: 390px;
-        min-height: 0;
+    .neural-window {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
     }
 }
 
@@ -1240,8 +1513,11 @@ span.tab-hint {
     }
 
     .ascii-name {
-        flex-direction: column;
-        gap: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0 1ch;
+        width: 100%;
+        max-width: 100%;
     }
 
     /* Make ASCII art smaller on mobile but still readable */
@@ -1276,6 +1552,15 @@ span.tab-hint {
         max-width: 100%;
         width: 100%;
         padding: 10px;
+    }
+
+    .experience-card {
+        gap: 10px;
+    }
+
+    .experience-logo {
+        width: 64px;
+        height: 64px;
     }
 
     .copyright {

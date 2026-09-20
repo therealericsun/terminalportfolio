@@ -1,5 +1,6 @@
 ---
 import '../styles/terminal.css';
+import { educationContent, experienceContent, skillsContent } from '../data/commands';
 ---
 
 <!DOCTYPE html>
@@ -13,11 +14,22 @@ import '../styles/terminal.css';
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
+    <script is:inline>
+        document.documentElement.dataset.viewMode = 'list';
+    </script>
 </head>
 <body>
     <canvas id="life-canvas" aria-hidden="true"></canvas>
 
     <section id="neural-background" class="neural-background" aria-label="Interactive handwritten digit neural network">
+        <div class="neural-window" aria-hidden="true">
+            <div class="neural-window-titlebar">
+                <span class="neural-window-mark">[ ]</span>
+                <span>mnist.cnn</span>
+                <span class="neural-window-rule"></span>
+                <span class="neural-window-controls">─ □ ×</span>
+            </div>
+        </div>
         <div class="mnist-shelf">
             <div class="mnist-samples" aria-label="Handwritten digit samples"></div>
             <button type="button" class="mnist-refresh" id="neural-refresh-samples" aria-label="Generate new digit samples" title="Generate new samples">
@@ -117,15 +129,31 @@ import '../styles/terminal.css';
  \ \_\\"\_\
   \/_/ \/_/</span></pre>
             </div>
-                <div class="output-line"><span class="link-bracket" aria-hidden="true">[</span> <a href="https://github.com/therealericsun" target="_blank">GitHub</a> · <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank">LinkedIn</a> · <a href="https://scholar.google.com/citations?user=lAt-xWMAAAAJ&hl=en" target="_blank">Google Scholar</a> · <a href="mailto:ericsun@seas.upenn.edu">Email</a> · <a href="/Eric_Sun_Resume.pdf" download>Resume</a> <span class="link-bracket" aria-hidden="true">]</span></div>
+                <div class="output-line intro-actions">
+                    <span class="contact-links"><span class="link-bracket" aria-hidden="true">[</span> <a href="https://github.com/therealericsun" target="_blank">GitHub</a> · <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank">LinkedIn</a> · <a href="mailto:ericsun@seas.upenn.edu">Email</a> · <a href="/Eric_Sun_Resume.pdf" download>Resume</a> <span class="link-bracket" aria-hidden="true">]</span></span>
+                    <span class="view-mode-toggle" role="group" aria-label="Choose site view">
+                        <span class="view-mode-label">view:</span>
+                        <button type="button" data-view-mode="terminal" aria-controls="terminal-view" aria-pressed="false">terminal</button>
+                        <span aria-hidden="true">·</span>
+                        <button type="button" data-view-mode="list" aria-controls="list-view" aria-pressed="false">list</button>
+                    </span>
+                </div>
                 <div class="intro-spacer"></div>
-                <div class="output-line intro-text">My name is Eric Sun (he/him). I study Physics and Computer Science at the University of Pennsylvania. My primary interests are in machine learning, numeric simulations, and high-performance computing. Explore this site using the terminal below.</div>
-                <div class="intro-spacer"></div>
-                <div class="output-line">Type <span class="command">help</span> to see available commands.</div>
-                <div class="output-line tab-hint">Tip: Use TAB for autocomplete and UP/DOWN to scroll terminal history</div>
-                <div class="output-line separator-line">─────────────────────────────────────────────────────────</div>
+                <div class="output-line intro-text">My name is Eric Sun (he/him). I study Physics and Computer Science at the University of Pennsylvania. My primary interests are in machine learning, numeric simulations, and high-performance computing.</div>
+                <div class="intro-spacer terminal-view-only"></div>
+                <div class="output-line terminal-view-only">Type <span class="command">help</span> to see available commands.</div>
+                <div class="output-line tab-hint terminal-view-only">Tip: Use TAB for autocomplete and UP/DOWN to scroll terminal history</div>
+                <div class="output-line separator-line terminal-view-only">─────────────────────────────────────────────────────────</div>
+                <section id="list-view" class="list-view list-view-only" aria-label="Experience, education, and skills">
+                    <h2 class="list-heading">Experience</h2>
+                    <div set:html={experienceContent}></div>
+                    <h2 class="list-heading">Education</h2>
+                    <div set:html={educationContent}></div>
+                    <h2 class="list-heading">Skills</h2>
+                    <div set:html={skillsContent}></div>
+                </section>
         </div>
-        <div class="terminal-scroll" role="region" aria-label="Terminal history">
+        <div id="terminal-view" class="terminal-scroll terminal-view-only" role="region" aria-label="Terminal history">
             <div id="output"></div>
             <div class="input-line">
             <span class="prompt">visitor@portfolio:~$</span>

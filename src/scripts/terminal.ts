@@ -3,7 +3,7 @@ import { parseCommandLine, extractCurrentCommand } from '../utils/commandParser'
 import type { ParsedCommand } from '../utils/commandParser';
 
 // Available file names for autocomplete (hidden files not included in autocomplete)
-const fileNames = ['skills.md', 'projects.md', 'experience.md', 'contact.md'];
+const fileNames = ['skills.md', 'projects.md', 'experience.md', 'education.md', 'contact.md'];
 
 const output = document.getElementById('output');
 const input = document.getElementById('command-input') as HTMLInputElement;
@@ -331,12 +331,40 @@ document.addEventListener('click', (event) => {
     const intent = clickIntent;
     clickIntent = null;
     if (event.defaultPrevented || event.button !== 0 || (event.target as Element).closest(interactiveSelector)) return;
-    if (intent?.dragged || window.getSelection()?.toString() || input?.disabled) return;
+    if (document.documentElement.dataset.viewMode !== 'terminal' || intent?.dragged || window.getSelection()?.toString() || input?.disabled) return;
     input?.focus({ preventScroll: true });
 });
 
-// Do not open a mobile keyboard before the visitor chooses to type.
-if (window.matchMedia('(pointer: fine)').matches) input?.focus({ preventScroll: true });
+type ViewMode = 'terminal' | 'list';
+const viewModeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-view-mode]'));
+const finePointer = window.matchMedia('(pointer: fine)');
+
+function setViewMode(mode: ViewMode, focusTerminal = false) {
+    document.documentElement.dataset.viewMode = mode;
+    viewModeButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.viewMode === mode));
+    });
+    if (mode === 'list') {
+        input?.blur();
+    } else if (focusTerminal && finePointer.matches) {
+        input?.focus({ preventScroll: true });
+    }
+}
+
+viewModeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+        const mode = button.dataset.viewMode as ViewMode;
+        if (document.documentElement.dataset.viewMode === mode) return;
+
+        // Keep this override after the reveal finishes. Removing it restores
+        // boot-line and replays its delay, making the content disappear again.
+        document.documentElement.classList.add('view-switched');
+        setViewMode(mode, mode === 'terminal');
+    });
+});
+
+const initialViewMode: ViewMode = document.documentElement.dataset.viewMode === 'terminal' ? 'terminal' : 'list';
+setViewMode(initialViewMode, initialViewMode === 'terminal');
 
 // Auto-update copyright year
 const yearElement = document.getElementById('current-year');

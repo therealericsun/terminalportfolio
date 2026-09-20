@@ -13,6 +13,7 @@ const getFileSystem = (): Record<string, () => string | null | Promise<string | 
     'skills.md': () => commands.skills.execute(),
     'projects.md': () => commands.projects.execute(),
     'experience.md': () => commands.experience.execute(),
+    'education.md': () => commands.education.execute(),
     'contact.md': () => commands.contact.execute(),
 });
 
@@ -35,6 +36,36 @@ ASCII art by Joan Stark (Spunk)
 Congratulations, you found the secret easter egg!</pre>`
 };
 
+export const skillsContent = `<div class="panel-box"><span class="section-heading">Languages:</span> ` +
+    `Python, C, C++, FORTRAN, Bash, Zsh, SQL, LaTeX</div>` +
+    `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
+    `PyTorch, TensorFlow, Scikit-learn, NumPy, SciPy, Pandas, Polars, Matplotlib, Plotly, ` +
+    `FastAPI, SQLAlchemy, Prefect, Celery, FastMCP, LangChain, Pybind11, Numba</div>` +
+    `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
+    `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, CUDA, GraphQL, gRPC, CI/CD, GitHub Actions, Gemini API, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
+    `Aurora, Neptune)</div>`;
+
+export const experienceContent = `<div class="panel-box experience-card">` +
+    `<div class="experience-copy"><span class="section-heading">Citadel · Quantitative Developer Intern</span><br>` +
+    `<span class="tab-hint">Jun 2026 - Aug 2026 · New York Metropolitan Area</span><br>` +
+    `Risk valuation systems for Citadel Commodities for exotic natural gas products and service contracts.</div>` +
+    `<img class="experience-logo" src="/citadel_llc_logo.jpg" alt="Citadel logo" width="200" height="200" loading="lazy" decoding="async"></div>` +
+    `<div class="panel-box experience-card">` +
+    `<div class="experience-copy"><span class="section-heading">Amazon Web Services (AWS) · Software Engineer Intern</span><br>` +
+    `<span class="tab-hint">May 2025 - Aug 2025 · San Francisco, CA</span><br>` +
+    `Generative ML models for science at the Caltech and AWS center for quantum computing.</div>` +
+    `<img class="experience-logo" src="/amazon_web_services_logo.jpg" alt="Amazon Web Services logo" width="200" height="200" loading="lazy" decoding="async"></div>`;
+
+export const educationContent = `<div class="panel-box">` +
+    `<div><span class="section-heading">University of Pennsylvania</span><br>` +
+    `<span class="tab-hint">August 2023 - May 2027 · Philadelphia, Pennsylvania</span>` +
+    `<div class="education-degrees">` +
+    `<div class="education-degree"><span>M.S.&nbsp;</span><span>Physics, <em>Submatriculant (Joint B.A./M.S.)</em></span></div>` +
+    `<div class="education-degree"><span>B.A.&nbsp;</span><span>Physics (Hons.), <em>Concentration in Computational Techniques</em></span></div>` +
+    `<div class="education-degree"><span>B.S.E.&nbsp;</span><span>Computer Science<span class="education-minor">Minor in Mathematics</span></span></div>` +
+    `</div>` +
+    `<div class="education-detail">GPA: 3.94 / 4.00<span class="education-program">Vagelos Integrated Program in Energy Research (VIPER)</span></div></div></div>`;
+
 // Restricted commands that should show a funny error
 const restrictedCommands = ['sudo', 'cd', 'rm', 'touch', 'mv', 'cp', 'mkdir', 'rmdir', 'chmod', 'chown'];
 
@@ -47,6 +78,7 @@ export const commands: Record<string, Command> = {
   `<div class="help-item"><span class="command">skills</span><span class="help-dash">-</span><span class="help-desc">View my technical skills</span></div>` +
   `<div class="help-item"><span class="command">projects</span><span class="help-dash">-</span><span class="help-desc">See my projects</span></div>` +
   `<div class="help-item"><span class="command">experience</span><span class="help-dash">-</span><span class="help-desc">View my work experience</span></div>` +
+  `<div class="help-item"><span class="command">education</span><span class="help-dash">-</span><span class="help-desc">View my education</span></div>` +
   `<div class="help-item"><span class="command">contact</span><span class="help-dash">-</span><span class="help-desc">Get my contact information</span></div></div>` +
   `<div class="panel-box">` +
   `<span class="section-heading">Commands:</span><br>` +
@@ -64,16 +96,7 @@ export const commands: Record<string, Command> = {
     },
     skills: {
         description: 'List technical skills',
-        execute: () => {
-            return `<div class="panel-box"><span class="section-heading">Languages:</span> ` +
-                `Python, C, C++, FORTRAN, Bash, Zsh, SQL, LaTeX</div>` +
-                `<div class="panel-box"><span class="section-heading">Libraries:</span> ` +
-                `PyTorch, TensorFlow, Scikit-learn, NumPy, SciPy, Pandas, Polars, Matplotlib, Plotly, ` +
-                `FastAPI, SQLAlchemy, Prefect, Celery, FastMCP, LangChain, Pybind11, Numba</div>` +
-                `<div class="panel-box"><span class="section-heading">Tools:</span> ` +
-                `Git, Docker, PostgreSQL, MySQL, Slurm, Kubernetes, Jupyter, Redis, CUDA, GraphQL, gRPC, CI/CD, GitHub Actions, Gemini API, AWS (Bedrock, Lambda, EC2, S3, OpenSearch, ` +
-                `Aurora, Neptune)</div>`;
-        }
+        execute: () => skillsContent
     },
     projects: {
         description: 'Show project portfolio',
@@ -104,23 +127,11 @@ export const commands: Record<string, Command> = {
     },
     experience: {
         description: 'Show work experience',
-        execute: () => {
-            return `<div class="panel-box"><span class="section-heading">Citadel · Quantitative Developer Intern</span><br>` +
-                `<span class="tab-hint">Jun 2026 - Aug 2026 · New York Metropolitan Area</span><br>` +
-                `Worked on the Commodities team at Citadel Energy Marketing (CEM), focusing on systems for physical natural gas markets.</div>` +
-                `<div class="panel-box"><span class="section-heading">University of Pennsylvania · Rappe Group Researcher</span><br>` +
-                `<span class="tab-hint">Nov 2023 - Jan 2026 · Philadelphia, PA</span><br>` +
-                `Pseudopotential theory under professor Andrew M. Rappe, development of new numeric solvers for computational physics problems.</div>` +
-                `<div class="panel-box"><span class="section-heading">Amazon Web Services (AWS) · Software Engineer Intern</span><br>` +
-                `<span class="tab-hint">May 2025 - Aug 2025 · San Francisco, CA</span><br>` +
-                `Generative ML models for science at the Caltech and AWS center for quantum computing.</div>` +
-                `<div class="panel-box"><span class="section-heading">Stanford University · Virtual Reality and Visual Computing Group Researcher</span><br>` +
-                `<span class="tab-hint">Jan 2022 - Mar 2023 · Stanford, CA</span><br>` +
-                `Neural radiance fields (NeRFs) development under ShanghaiTech University professor Jingyi Yu and Stanford PhD candidate Kevin Fry.</div>` +
-                `<div class="panel-box"><span class="section-heading">Yale University · BCT326 Group Researcher</span><br>` +
-                `<span class="tab-hint">Mar 2022 - Sep 2022 · New Haven, CT</span><br>` +
-                `Automated the processing of spectroscopy data with convolutional autoencoders. Also was a guest instructor for the Pathways to Science summer program.</div>`;
-        }
+        execute: () => experienceContent
+    },
+    education: {
+        description: 'Show education',
+        execute: () => educationContent
     },
     bonsai: {
         description: 'Generate a random ASCII bonsai tree (use -s <seed> for specific tree)',
