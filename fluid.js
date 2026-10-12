@@ -12,14 +12,17 @@
   const vortexStrength = .58;
   const glyphs = ' .:-=+*#%@';
   let cols = 0, rows = 0, density, nextDensity, red, nextRed, blue, nextBlue;
-  let ambientSurface, ambientWarm, ambientCool;
+  let ambientSurface, ambientWarm, ambientCool, wake, nextWake;
+  let textNormalX, textNormalY, textInfluence, textSlide, textSolid;
   let flowX, nextFlowX, flowY, nextFlowY, phase = 0, raf = 0, last = 0;
   let ambientClock = .2, ambientPositive = true;
   const ambientWaves = [];
+  let lastWakePoint = null;
+  let textLines = [];
   let vortexAt = Infinity, vortexStart = Infinity, twistBloom = 0;
   const pointer = { x: -100, y: -100, seen: false };
   const boat = { x: 0, y: 0, vx: 6, vy: 2, facing: 1, visible: false,
-    heave: 0, heaveVelocity: 0, tilt: 0, tiltVelocity: 0, popStart: Infinity };
+    heave: 0, heaveVelocity: 0, tilt: 0, tiltVelocity: 0, popStart: Infinity, splashFreedom: 0, splashUntil: 0 };
   const vortex = { x: 0, y: 0 };
   let dragPointerId = null, dragOffsetX = 0, dragOffsetY = 0;
   let viewportWidth = 0, viewportHeight = 0;
@@ -64,6 +67,8 @@
     boat.visible = false;
     boat.heave = boat.heaveVelocity = boat.tilt = boat.tiltVelocity = 0;
     boat.popStart = Infinity;
+    boat.splashFreedom = boat.splashUntil = 0;
+    lastWakePoint = null;
     boatCtx?.clearRect(0, 0, innerWidth, innerHeight);
   }
 
@@ -72,7 +77,15 @@
       + Math.max(0, Math.min(cols - 1, x));
   }
 
+  function reflectCoordinate(value, limit) {
+    if (limit <= 0) return 0;
+    const wrapped = ((value % (limit * 2)) + limit * 2) % (limit * 2);
+    return wrapped <= limit ? wrapped : limit * 2 - wrapped;
+  }
+
   function sample(field, x, y) {
+    x = reflectCoordinate(x, cols - 1);
+    y = reflectCoordinate(y, rows - 1);
     const x0 = Math.floor(x), y0 = Math.floor(y);
     const fx = x - x0, fy = y - y0;
     return field[index(x0, y0)] * (1 - fx) * (1 - fy)
@@ -83,7 +96,6 @@
 
   // Range fragments follow the actual wrapped lines, including inline links.
   function measureTextLines() {
-    if (innerWidth <= 650) { textBuckets.clear(); return; }
     const main = document.querySelector('main');
     if (!main) return;
     const fragments = [];
@@ -112,6 +124,7 @@
         line.right = Math.max(line.right, fragment.right);
       } else lines.push({ ...fragment });
     }
+    textLines = lines;
     textBuckets.clear();
     for (const line of lines) {
       for (let y = Math.floor(line.top / textBucketSize); y <= Math.floor(line.bottom / textBucketSize); y++) {
@@ -122,6 +135,67 @@
         }
       }
     }
+    rebuildTextFlow();
+  }
+
+  function lineAt(x, y, margin = 0) {
+    if (!textVisible) return null;
+    for (const line of textBuckets.get(`${Math.floor(x / textBucketSize)},${Math.floor(y / textBucketSize)}`) || []) {
+      if (x >= line.left - margin && x <= line.right + margin
+        && y >= line.top - margin && y <= line.bottom + margin) return line;
+    }
+    return null;
+  }
+
+  function rebuildTextFlow() {
+    if (!textInfluence) return;
+    textNormalX.fill(0); textNormalY.fill(0); textInfluence.fill(0);
+    textSlide.fill(0); textSolid.fill(0);
+    const reach = cell * 1.3;
+    for (const line of textLines) {
+      const minX = Math.max(0, Math.floor((line.left - reach) / cell));
+      const maxX = Math.min(cols - 1, Math.ceil((line.right + reach) / cell));
+      const minY = Math.max(0, Math.floor((line.top - reach) / cell));
+      const maxY = Math.min(rows - 1, Math.ceil((line.bottom + reach) / cell));
+      for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+        const px = (x + .5) * cell, py = (y + .5) * cell;
+        let dx = px - clamp(px, line.left, line.right);
+        let dy = py - clamp(py, line.top, line.bottom);
+        let distance = Math.hypot(dx, dy);
+        const inside = distance < .0001;
+        if (inside) {
+          const faces = [
+            [px - line.left, -1, 0], [line.right - px, 1, 0],
+            [py - line.top, 0, -1], [line.bottom - py, 0, 1],
+          ];
+          const face = faces.reduce((a, b) => b[0] < a[0] ? b : a);
+          dx = face[1]; dy = face[2]; distance = 0;
+        } else { dx /= distance; dy /= distance; }
+        const weight = Math.exp(-distance * distance / (cell * cell * .6));
+        const i = y * cols + x;
+        if (weight <= textInfluence[i]) continue;
+        textInfluence[i] = weight;
+        textNormalX[i] = dx; textNormalY[i] = dy;
+        textSlide[i] = Math.sign(dy ? (px - (line.left + line.right) / 2) * -dy
+          : (py - (line.top + line.bottom) / 2) * dx) || 1;
+        textSolid[i] = inside ? 1 : 0;
+      }
+    }
+  }
+
+  function bendFlow(vx, vy, i) {
+    const x = i % cols, y = Math.floor(i / cols);
+    if ((x === 0 && vx < 0) || (x === cols - 1 && vx > 0)) vx *= -.82;
+    if ((y === 0 && vy < 0) || (y === rows - 1 && vy > 0)) vy *= -.82;
+    if (!textVisible || !textInfluence[i]) return [vx, vy];
+    const nx = textNormalX[i], ny = textNormalY[i], weight = textInfluence[i];
+    const normal = vx * nx + vy * ny;
+    const inward = textSolid[i] ? normal : Math.min(0, normal);
+    const tangent = -ny * vx + nx * vy;
+    const direction = Math.abs(tangent) > .035 ? Math.sign(tangent) : textSlide[i];
+    const diverted = Math.abs(inward) * weight;
+    return [vx - inward * nx * weight - ny * direction * diverted * .7,
+      vy - inward * ny * weight + nx * direction * diverted * .7];
   }
 
   function bounceFromText() {
@@ -215,6 +289,13 @@
     nextRed = new Float32Array(size);
     blue = new Float32Array(size);
     nextBlue = new Float32Array(size);
+    wake = new Float32Array(size);
+    nextWake = new Float32Array(size);
+    textNormalX = new Float32Array(size);
+    textNormalY = new Float32Array(size);
+    textInfluence = new Float32Array(size);
+    textSlide = new Float32Array(size);
+    textSolid = new Uint8Array(size);
     ambientSurface = new Float32Array(size);
     ambientWarm = new Float32Array(size);
     ambientCool = new Float32Array(size);
@@ -225,6 +306,8 @@
     twistBloom = 0;
     ambientWaves.length = 0;
     ambientClock = .2;
+    lastWakePoint = null;
+    rebuildTextFlow();
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       density[y * cols + x] = seaPattern(x, y, 0);
     }
@@ -254,7 +337,7 @@
       x: Math.random() * cols,
       y: Math.random() * rows,
       angle: Math.random() * Math.PI * 2,
-      radius, strength: .55 + Math.random() * 1.15,
+      radius, vx: 0, vy: 0, strength: .55 + Math.random() * 1.15,
       aspect: .35 + Math.random() * .55, rotation: .08 + Math.random() * .2,
       age: 0, life: 6 + radius * .25 + Math.random() * 2.5,
       positive: ambientPositive, spiral: Math.random() < .45,
@@ -277,10 +360,27 @@
       if (wave.age >= wave.life) { ambientWaves.splice(n, 1); continue; }
       const envelope = Math.sin(Math.PI * wave.age / wave.life) ** 2;
       const sign = wave.positive ? 1 : -1;
-      const transportX = .28 * Math.sin(wave.y * .13 + phase) + sample(flowX, wave.x, wave.y);
-      const transportY = .28 * Math.cos(wave.x * .12 - phase) + sample(flowY, wave.x, wave.y);
-      wave.x += transportX * .58 * dt * 20;
-      wave.y = clamp(wave.y + transportY * .58 * dt * 20, 0, rows - 1);
+      const [transportX, transportY] = bendFlow(
+        .28 * Math.sin(wave.y * .13 + phase) + sample(flowX, wave.x, wave.y),
+        .28 * Math.cos(wave.x * .12 - phase) + sample(flowY, wave.x, wave.y),
+        index(Math.floor(wave.x), Math.floor(wave.y)));
+      const response = 1 - Math.exp(-dt * .9);
+      wave.vx += (transportX - wave.vx) * response;
+      wave.vy += (transportY - wave.vy) * response;
+      wave.x += wave.vx * .58 * dt * 20;
+      wave.y += wave.vy * .58 * dt * 20;
+      if (wave.x < 0 || wave.x > cols - 1) {
+        wave.x = reflectCoordinate(wave.x, cols - 1);
+        wave.vx *= -.82;
+        wave.angle = Math.PI - wave.angle;
+        wave.rotation *= -1;
+      }
+      if (wave.y < 0 || wave.y > rows - 1) {
+        wave.y = reflectCoordinate(wave.y, rows - 1);
+        wave.vy *= -.82;
+        wave.angle *= -1;
+        wave.rotation *= -1;
+      }
       const segments = Math.max(20, Math.ceil(wave.radius * 5));
       for (let k = 0; k <= segments; k++) {
         const u = k / segments;
@@ -288,8 +388,8 @@
           + (wave.spiral ? u * 4.6 : (u - .5) * 2.2);
         const radius = wave.spiral ? .6 + u * wave.radius
           : wave.radius + wave.age * .22;
-        const x = wave.x + Math.cos(angle) * radius;
-        const y = wave.y + Math.sin(angle) * radius * wave.aspect;
+        const x = reflectCoordinate(wave.x + Math.cos(angle) * radius, cols - 1);
+        const y = reflectCoordinate(wave.y + Math.sin(angle) * radius * wave.aspect, rows - 1);
         const x0 = Math.floor(x), y0 = Math.floor(y);
         const crest = envelope * Math.sin(Math.PI * u) * wave.strength * dt * 20;
         // Bilinear deposits keep the thin moving curve continuous on the glyph grid.
@@ -299,6 +399,7 @@
           const weight = crest * (ox ? x - x0 : 1 - x + x0)
             * (oy ? y - y0 : 1 - y + y0);
           const i = iy * cols + ix;
+          if (textVisible && textSolid[i]) continue;
           ambientSurface[i] += weight * .12;
           if (wave.positive) ambientWarm[i] += weight * .16;
           else ambientCool[i] += weight * .16;
@@ -334,6 +435,48 @@
     }
   }
 
+  function leaveBoatWake(dt, time) {
+    const speed = Math.hypot(boat.vx, boat.vy);
+    if (dt <= 0 || time - boat.popStart < 850 || speed < 55) {
+      lastWakePoint = null;
+      return;
+    }
+    const cosine = Math.cos(boat.tilt), sine = Math.sin(boat.tilt);
+    const sternX = -28 * boat.facing, sternY = 10;
+    const point = { x: boat.x + sternX * cosine - sternY * sine,
+      y: boat.y + boat.heave + sternX * sine + sternY * cosine, facing: boat.facing };
+    const previous = lastWakePoint && lastWakePoint.facing === boat.facing
+      && Math.hypot(point.x - lastWakePoint.x, point.y - lastWakePoint.y) < cell * 2
+      ? lastWakePoint : point;
+    const steps = Math.max(1, Math.ceil(Math.hypot(point.x - previous.x, point.y - previous.y) / 6));
+    const strength = .12 * clamp((speed - 50) / 35, 0, 1) * dt * 20 / steps;
+    for (let step = 1; step <= steps; step++) {
+      const x = Math.round((previous.x + (point.x - previous.x) * step / steps) / cell - .5);
+      const y = Math.round((previous.y + (point.y - previous.y) * step / steps) / cell - .5);
+      if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
+      const i = y * cols + x;
+      if (textVisible && textSolid[i]) continue;
+      wake[i] = Math.min(.45, wake[i] + strength);
+    }
+    lastWakePoint = point;
+  }
+
+  function drawGridWake() {
+    boatCtx.save();
+    boatCtx.font = '10px Menlo, Monaco, Consolas, monospace';
+    boatCtx.textAlign = 'center'; boatCtx.textBaseline = 'middle';
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const amount = wake[y * cols + x];
+      if (amount < .045) continue;
+      const px = (x + .5) * cell, py = (y + .5) * cell;
+      if (lineAt(px, py, 3)) continue;
+      const alpha = .92 * Math.min(1, amount / .08);
+      boatCtx.fillStyle = `rgba(235,235,235,${alpha.toFixed(2)})`;
+      boatCtx.fillText(amount > .18 ? ':' : '.', px, py);
+    }
+    boatCtx.restore();
+  }
+
   function drawBoat(dt, time) {
     if (!boatCtx || innerWidth <= 650) return;
     boatCtx.clearRect(0, 0, innerWidth, innerHeight);
@@ -348,6 +491,8 @@
     const currentX = sample(flowX, x, y);
     const currentY = sample(flowY, x, y);
     if (dt > 0) {
+      if (time > boat.splashUntil) boat.splashFreedom *= Math.exp(-dt / 2.2);
+      const steering = 1 - .9 * boat.splashFreedom;
       // Gather into a circling lane. Splashes still shove the boat away from it.
       const orbitRamp = vortexStart === Infinity ? 0
         : clamp((time - vortexStart) / 520, 0, 1);
@@ -365,11 +510,11 @@
       const orbitalSpeed = Math.min(72, Math.max(42, orbitRadius * .65));
       const targetX = radialX * radialSpeed - radialY * orbitalSpeed;
       const targetY = radialY * radialSpeed + radialX * orbitalSpeed;
-      boat.vx += ((boat.facing * 12 - boat.vx) * .35 * (1 - orbit)
-        + (targetX - boat.vx) * 2 * orbit
+      boat.vx += ((boat.facing * 12 - boat.vx) * .35 * (1 - orbit) * steering
+        + (targetX - boat.vx) * 2 * orbit * steering
         + currentX * (100 - 65 * orbit) - (right - left) * 180) * dt;
-      boat.vy += ((Math.sign(boat.vy || 1) * 5 - boat.vy) * .3 * (1 - orbit)
-        + (targetY - boat.vy) * 2 * orbit
+      boat.vy += ((Math.sign(boat.vy || 1) * 5 - boat.vy) * .3 * (1 - orbit) * steering
+        + (targetY - boat.vy) * 2 * orbit * steering
         + currentY * (90 - 58 * orbit) - (below - above) * 155) * dt;
       boat.vx = clamp(boat.vx, -100, 100);
       boat.vy = clamp(boat.vy, -85, 85);
@@ -400,6 +545,8 @@
       boat.tilt = clamp(boat.tilt + boat.tiltVelocity * dt, -.21, .21);
     }
 
+    leaveBoatWake(dt, time);
+    drawGridWake();
     const pop = clamp((time - boat.popStart) / 850, 0, 1);
     const rise = 1 - (1 - pop) ** 3;
     boatCtx.save();
@@ -459,8 +606,8 @@
 
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const i = y * cols + x;
-      const vx = .28 * Math.sin(y * .13 + t) + flowX[i];
-      const vy = .28 * Math.cos(x * .12 - t) + flowY[i];
+      const [vx, vy] = bendFlow(.28 * Math.sin(y * .13 + t) + flowX[i],
+        .28 * Math.cos(x * .12 - t) + flowY[i], i);
       const backX = x - vx * .58, backY = y - vy * .58;
       const sx = x - sourceX, sy = y - sourceY;
       const sx2 = x - source2X, sy2 = y - source2Y;
@@ -480,24 +627,28 @@
       const r = Math.min(1, sample(red, backX, backY) * dyeDecay);
       const b = Math.min(1, sample(blue, backX, backY) * dyeDecay
         + sourceDye * vortexRamp * 1.3 * vortexStrength);
-      nextDensity[i] = d;
-      nextRed[i] = r;
-      nextBlue[i] = b;
+      const solid = textVisible && textSolid[i];
+      nextDensity[i] = d * (solid ? .85 : 1);
+      nextRed[i] = r * (solid ? .75 : 1);
+      nextBlue[i] = b * (solid ? .75 : 1);
+      nextWake[i] = solid ? 0 : sample(wake, x - vx * .18, y - vy * .18) * .9;
       const reach = Math.exp(-radius * radius / (rows * rows * .2 * .2))
         * vortexRamp * vortexStrength;
       const localSpin = reach * (.008 + twistSurge * .004);
       const localPull = reach * (.0038 + twistSurge * .0012);
-      nextFlowX[i] = sample(flowX, backX, backY) * momentumDecay
-        - coreY * localSpin - coreX * localPull;
-      nextFlowY[i] = sample(flowY, backX, backY) * momentumDecay
-        + coreX * localSpin - coreY * localPull;
+      const [advectedX, advectedY] = bendFlow(
+        sample(flowX, backX, backY) * momentumDecay - coreY * localSpin - coreX * localPull,
+        sample(flowY, backX, backY) * momentumDecay + coreX * localSpin - coreY * localPull, i);
+      nextFlowX[i] = advectedX;
+      nextFlowY[i] = advectedY;
 
       const interference = Math.sin(x * .21 + y * .15 - t * .46)
         * Math.cos(y * .29 - x * .11 + t * .31);
       const texture = .72 + .2 * interference
         + .08 * Math.sin(x * .33 - y * .26 + t * .32);
-      const surface = d + ambientSurface[i];
-      const warmDye = r + ambientWarm[i], coolDye = b + ambientCool[i];
+      const surface = (d + ambientSurface[i]) * (solid ? .25 : 1);
+      const warmDye = (r + ambientWarm[i]) * (solid ? .25 : 1);
+      const coolDye = (b + ambientCool[i]) * (solid ? .25 : 1);
       const brightness = Math.min(1, surface * 1.08 * texture + Math.max(warmDye, coolDye) * .5);
       const level = Math.min(glyphs.length - 1, Math.floor(brightness * glyphs.length));
       if (level === 0) continue;
@@ -514,6 +665,7 @@
     [density, nextDensity] = [nextDensity, density];
     [red, nextRed] = [nextRed, red];
     [blue, nextBlue] = [nextBlue, blue];
+    [wake, nextWake] = [nextWake, wake];
     [flowX, nextFlowX] = [nextFlowX, flowX];
     [flowY, nextFlowY] = [nextFlowY, flowY];
     drawBoat(dt, time);
@@ -562,6 +714,8 @@
     const influence = Math.exp(-distance * distance / (2 * 3.1 * 3.1));
     if (influence < .03) return;
     const impulse = Math.min(28, power * 9) * influence;
+    boat.splashFreedom = Math.max(boat.splashFreedom, influence);
+    boat.splashUntil = performance.now() + 1800;
     boat.vx = clamp(boat.vx + ox / (distance + .5) * impulse + dx * influence * 2, -100, 100);
     boat.vy = clamp(boat.vy + oy / (distance + .5) * impulse + dy * influence * 2, -85, 85);
   }
