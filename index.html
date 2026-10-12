@@ -8,11 +8,14 @@
   <title>Eric Sun</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
+  <script>document.documentElement.classList.add('intro-pending')</script>
   <script src="./fluid.js" defer></script>
   <script src="./intro.js" defer></script>
 </head>
 <body>
   <canvas id="fluid" aria-hidden="true"></canvas>
+  <canvas id="boat" aria-hidden="true"></canvas>
+  <button id="vortex-handle" type="button" aria-label="Vortex source. Drag to move new waves, or use arrow keys" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight" hidden><span aria-hidden="true">((@))</span></button>
   <main class="page">
     <header class="intro">
       <div class="intro-main">
@@ -46,21 +49,6 @@
  \ \_\\"\_\
   \/_/ \/_/</span></span></h1>
         <p class="contact-line">Email: <a href="mailto:ericsun@seas.upenn.edu">ericsun@seas.upenn.edu</a><br>External: <a href="https://github.com/therealericsun" target="_blank" rel="noopener noreferrer">GitHub</a> <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank" rel="noopener noreferrer">LinkedIn</a> <a href="./Eric_Sun_Resume.pdf" download>Resume</a></p>
-      </div>
-      <div class="fluid-controls" role="group" aria-label="Fluid simulation controls">
-        <div class="fluid-actions">
-          <span>fluid:</span>
-          <button id="fluid-toggle" type="button" aria-pressed="false">pause</button>
-          <span aria-hidden="true">/</span>
-          <button id="fluid-reset" type="button">reset</button>
-        </div>
-        <label class="fluid-slider">speed <input id="fluid-speed" type="range" min="0.2" max="2.5" step="0.05" value="1" aria-valuetext="1.00×"></label>
-        <label class="fluid-slider">stir <input id="fluid-stir" type="range" min="0.35" max="1.8" step="0.05" value="1" aria-valuetext="1.00×"></label>
-        <div class="fluid-color-picker">
-          <span>dye</span>
-          <div class="fluid-color-value"><button id="fluid-palette-toggle" class="fluid-swatch" type="button" aria-label="Choose disturbance color" aria-expanded="false" aria-controls="fluid-palette"></button><span id="fluid-hex">#D23030</span></div>
-          <div id="fluid-palette" class="fluid-palette" role="group" aria-label="Disturbance colors" hidden></div>
-        </div>
       </div>
     </header>
 

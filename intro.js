@@ -1,15 +1,22 @@
 // Staggered text scramble inspired by the entrance on ertdfgcvb.xyz.
 (() => {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.classList.remove('intro-pending');
+    return;
+  }
 
   const main = document.querySelector('main');
+  const root = document.documentElement;
   const targets = document.querySelectorAll('.intro-main, .directory, footer');
   const glyphs = './\\|_-=+*#%@;:<>[]{}0123456789';
+  const boatEntranceAt = 800;
+  const textEntranceAt = 2000;
   let priorNodes = [];
   let raf = 0;
   const scramble = () => glyphs[Math.floor(Math.random() * glyphs.length)];
 
   function playIntro() {
+    root.classList.add('intro-pending');
     cancelAnimationFrame(raf);
     for (const entry of priorNodes) entry.node.textContent = entry.original;
 
@@ -47,14 +54,29 @@
     }
     range.detach();
     priorNodes = nodes;
-    if (!nodes.length) return;
+    if (!nodes.length) { root.classList.remove('intro-pending'); return; }
     pulses.sort((a, b) => a.at - b.at);
     let nextPulse = 0, lastFrame = -Infinity;
+    let boatShown = false, textStarted = false;
     main.setAttribute('aria-busy', 'true');
     const start = performance.now();
 
     function frame(now) {
-      const elapsed = now - start;
+      const sceneElapsed = now - start;
+      if (!boatShown && sceneElapsed >= boatEntranceAt) {
+        boatShown = true;
+        dispatchEvent(new Event('portfolio:boat-pop'));
+      }
+      if (sceneElapsed < textEntranceAt) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      if (!textStarted) {
+        textStarted = true;
+        root.classList.remove('intro-pending');
+        dispatchEvent(new Event('portfolio:text-start'));
+      }
+      const elapsed = sceneElapsed - textEntranceAt;
       if (elapsed - lastFrame >= 42 || elapsed >= latestReveal) {
         lastFrame = elapsed;
         for (const entry of nodes) {

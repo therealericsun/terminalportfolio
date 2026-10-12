@@ -1,8 +1,12 @@
 # Eric Sun
 
-A minimal, single-page portfolio at [ericsun.net](https://ericsun.net/). Experience, education, and skills sit beside an interactive textmode fluid field. The page uses plain HTML, CSS, and JavaScript, with no build step or runtime dependencies.
+A minimal, single-page portfolio at [ericsun.net](https://ericsun.net/). Experience, education, skills, contact links, and the resume sit beside an interactive textmode sea. The site uses semantic HTML, CSS, and JavaScript, with no runtime dependencies or build step.
 
-The entrance uses a staggered character scramble inspired by [ertdfgcvb.xyz](https://ertdfgcvb.xyz/). Revealing text stirs the initially quiet field. After a short pause, a wide twist brings stronger right-side vortices into view; moving the pointer adds further disturbances. Color briefly marks fresh motion before fading to gray. The fluid controls let you pause, change its speed and stir strength, choose a color from a small honeycomb palette, and replay the full entrance with Reset. Motion is disabled for visitors who prefer reduced motion.
+The text directory and character scramble are inspired by [ertdfgcvb.xyz](https://ertdfgcvb.xyz/); the fluid field draws inspiration from [Textmode Overlay](https://extension.textmode.art/). The simulation and boat are original canvas sketches.
+
+The entrance holds on the sea, then a small ASCII boat rises from the center with a red splash and settles onto the water. After a pause, the text glitches into place and stirs the fluid. A second pause introduces a blue whirlpool and its draggable `((@))` marker. The boat follows currents, circles the whirlpool, mirrors when it reverses, and bounces off viewport edges and rendered text lines. Moving the marker changes new wave generation; existing waves keep flowing.
+
+Red pointer splashes and blue whirlpool disturbances fade to gray. Curved red and blue wavelets and swirls of varied size, strength, and shape arise throughout the viewport and drift with the current. The interface has no simulation settings. Mobile hides the boat and marker and scales the ASCII name to fit both words on one row. Motion stops in hidden tabs and is disabled for visitors who prefer reduced motion.
 
 ## Run locally
 
@@ -10,8 +14,8 @@ The entrance uses a staggered character scramble inspired by [ertdfgcvb.xyz](htt
 npm run dev
 ```
 
-Open <http://127.0.0.1:8765/>. Run `npm run check` to validate the JavaScript files. Python 3 and Node.js are needed only for these local commands; the published site is static.
+Open <http://127.0.0.1:8765/>. Run `npm run check` to validate the JavaScript. Python 3 and Node.js are needed only for these local commands.
 
 ## Deployment
 
-Pushing to `main` runs the [GitHub Pages workflow](.github/workflows/deploy.yml), which publishes the root page and its assets to [ericsun.net](https://ericsun.net/). The custom domain is set in [`CNAME`](CNAME).
+Pushing to `main` runs the [GitHub Pages workflow](.github/workflows/deploy.yml), which publishes the page and assets to [ericsun.net](https://ericsun.net/). The custom domain is configured in [`CNAME`](CNAME).
