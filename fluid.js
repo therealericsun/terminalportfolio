@@ -22,7 +22,7 @@
   let flowX, nextFlowX, flowY, nextFlowY, phase = 0, raf = 0, last = 0;
   let paused = false;
   let flowSpeed = 1, stirPower = 1;
-  let vortexPulseAt = performance.now() + 140, vortexPulsePending = true;
+  let vortexAt = Infinity, vortexStart = Infinity;
   let dyeRgb = [210, 48, 48];
   const pointer = { x: -100, y: -100, seen: false };
 
@@ -56,18 +56,6 @@
     nextFlowX = new Float32Array(size);
     flowY = new Float32Array(size);
     nextFlowY = new Float32Array(size);
-    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-      const dx = x - cols * .76, dy = y - rows * .49;
-      const dx2 = x - cols * .56, dy2 = y - rows * .68;
-      const ring = Math.abs(Math.hypot(dx * 1.05, dy * .9) - rows * .26);
-      const innerRing = Math.abs(Math.hypot(dx2 * .9, dy2 * 1.2) - rows * .18);
-      const sweep = y - rows * (.61 + .11 * Math.sin(x * .17));
-      const gate = Math.max(0, Math.min(1, (x - cols * .35) / (cols * .2)));
-      density[y * cols + x] = Math.min(.8,
-        .48 * Math.exp(-ring * ring * .1)
-        + .34 * Math.exp(-innerRing * innerRing * .16)
-        + .18 * gate * Math.exp(-sweep * sweep * .38));
-    }
   }
 
   // Dye, density, and momentum all scale with the disturbance strength.
@@ -88,16 +76,38 @@
     }
   }
 
+  // The second beat twists the quiet field into a wide spiral before its sources wake up.
+  function launchTwist(time) {
+    vortexStart = time;
+    const centerX = cols * .73, centerY = rows * .54;
+    const radius = Math.max(9, rows * .62);
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const ox = x - centerX, oy = y - centerY;
+      const distance = Math.hypot(ox, oy);
+      const weight = Math.exp(-distance * distance / (radius * radius * .42));
+      if (weight < .012) continue;
+      const angle = Math.atan2(oy, ox);
+      const arm = Math.pow(Math.max(0, Math.sin(angle * 2.4 - distance * .22)), 2);
+      const i = y * cols + x;
+      density[i] = Math.min(1.2, density[i] + weight * (.22 + arm * .54));
+      red[i] = Math.min(1, red[i] + weight * (.2 + arm * .66));
+      flowX[i] += -oy / (distance + 2) * weight * 3.8;
+      flowY[i] += ox / (distance + 2) * weight * 3.8;
+    }
+  }
+
   function draw(time) {
     if (!paused) raf = requestAnimationFrame(draw);
     if (time - last < 48) return;
     last = time;
     if (!paused) phase += .035 * flowSpeed;
     const t = phase;
-    if (vortexPulsePending && time >= vortexPulseAt) {
-      vortexPulsePending = false;
-      stir(cols * .72, rows * .6, 2.4, -2, 1.65, 1.5, 2.1);
-    }
+    if (time >= vortexAt && vortexStart === Infinity) launchTwist(time);
+    const vortexAge = time - vortexStart;
+    const rampProgress = vortexStart === Infinity ? 0
+      : Math.min(1, Math.max(0, vortexAge / 700));
+    const vortexRamp = rampProgress * rampProgress * (3 - 2 * rampProgress);
+    const twistSurge = vortexStart === Infinity ? 0 : Math.exp(-vortexAge / 850);
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     ctx.font = '15px ui-monospace, SFMono-Regular, Menlo, monospace';
     ctx.textAlign = 'center';
@@ -122,9 +132,9 @@
       const ax = x - c1x, ay = y - c1y;
       const bx = x - c2x, by = y - c2y;
       const cx = x - c3x, cy = y - c3y;
-      const af = .065 * Math.exp(-(ax * ax + ay * ay) / (rows * rows * .38 * .38));
-      const bf = -.085 * Math.exp(-(bx * bx + by * by) / (rows * rows * .3 * .3));
-      const cf = .052 * Math.exp(-(cx * cx + cy * cy) / (rows * rows * .34 * .34));
+      const af = vortexRamp * (.105 + twistSurge * .06) * Math.exp(-(ax * ax + ay * ay) / (rows * rows * .38 * .38));
+      const bf = -vortexRamp * (.14 + twistSurge * .075) * Math.exp(-(bx * bx + by * by) / (rows * rows * .3 * .3));
+      const cf = vortexRamp * (.085 + twistSurge * .045) * Math.exp(-(cx * cx + cy * cy) / (rows * rows * .34 * .34));
       const vx = -ay * af - by * bf - cy * cf + .28 * Math.sin(y * .13 + t) + flowX[i];
       const vy = ax * af + bx * bf + cx * cf + .28 * Math.cos(x * .12 - t) + flowY[i];
       const backX = x - vx * .58 * flowSpeed, backY = y - vy * .58 * flowSpeed;
@@ -142,9 +152,9 @@
         + filamentGate * Math.exp(-filamentDistance * filamentDistance / 2.8)
           * (.006 + .002 * Math.sin(x * .35 - t * .6))
         + filamentGate * Math.exp(-crossDistance * crossDistance / 2.5) * .004;
-      const d = Math.min(1.1, sample(density, backX, backY) * densityDecay + source * flowSpeed);
+      const d = Math.min(1.1, sample(density, backX, backY) * densityDecay + source * flowSpeed * vortexRamp * 1.3);
       const sourceDye = source * filamentGate * .8;
-      const r = Math.min(1, sample(red, backX, backY) * dyeDecay + sourceDye * flowSpeed);
+      const r = Math.min(1, sample(red, backX, backY) * dyeDecay + sourceDye * flowSpeed * vortexRamp * 1.3);
       nextDensity[i] = d;
       nextRed[i] = r;
       nextFlowX[i] = sample(flowX, backX, backY) * momentumDecay;
@@ -170,6 +180,10 @@
     [flowX, nextFlowX] = [nextFlowX, flowX];
     [flowY, nextFlowY] = [nextFlowY, flowY];
   }
+
+  addEventListener('portfolio:intro-text-complete', () => {
+    vortexAt = performance.now() + 280;
+  });
 
   addEventListener('portfolio:text-glitch', e => {
     for (const point of e.detail) {
@@ -326,9 +340,9 @@
       if (!document.hidden) raf = requestAnimationFrame(draw);
     }
     last = -Infinity;
+    vortexAt = Infinity;
+    vortexStart = Infinity;
     dispatchEvent(new Event('portfolio:reset-intro'));
-    vortexPulseAt = performance.now() + 140;
-    vortexPulsePending = true;
   });
   resize();
   raf = requestAnimationFrame(draw);

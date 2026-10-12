@@ -73,7 +73,11 @@
         if (settled.length) dispatchEvent(new CustomEvent('portfolio:text-glitch', { detail: settled }));
       }
       if (elapsed < latestReveal) raf = requestAnimationFrame(frame);
-      else { raf = 0; main.removeAttribute('aria-busy'); }
+      else {
+        raf = 0;
+        main.removeAttribute('aria-busy');
+        dispatchEvent(new Event('portfolio:intro-text-complete'));
+      }
     }
     frame(start);
   }

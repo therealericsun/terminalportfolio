@@ -2,7 +2,7 @@
 
 A minimal, single-page portfolio at [ericsun.net](https://ericsun.net/). Experience, education, and skills sit beside an interactive textmode fluid field. The page uses plain HTML, CSS, and JavaScript, with no build step or runtime dependencies.
 
-The entrance uses a staggered character scramble inspired by [ertdfgcvb.xyz](https://ertdfgcvb.xyz/). Revealing text stirs the fluid beneath it; moving the pointer adds further disturbances. Color briefly marks fresh motion before fading to gray. The fluid controls let you pause, change its speed and stir strength, choose a color from a small honeycomb palette, and replay the full entrance with Reset. Motion is disabled for visitors who prefer reduced motion.
+The entrance uses a staggered character scramble inspired by [ertdfgcvb.xyz](https://ertdfgcvb.xyz/). Revealing text stirs the initially quiet field. After a short pause, a wide twist brings stronger right-side vortices into view; moving the pointer adds further disturbances. Color briefly marks fresh motion before fading to gray. The fluid controls let you pause, change its speed and stir strength, choose a color from a small honeycomb palette, and replay the full entrance with Reset. Motion is disabled for visitors who prefer reduced motion.
 
 ## Run locally
 
