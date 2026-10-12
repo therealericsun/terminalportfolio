@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Eric Sun — Physics and Computer Science at the University of Pennsylvania.">
+  <title>Eric Sun</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./fluid.js" defer></script>
+  <script src="./intro.js" defer></script>
+</head>
+<body>
+  <canvas id="fluid" aria-hidden="true"></canvas>
+  <main class="page">
+    <header class="intro">
+      <div class="intro-main">
+        <h1 class="ascii-name" aria-label="Eric Sun"><span class="ascii-word ascii-eric" aria-hidden="true"><span class="ascii-letter"> ______
+/\  ___\
+\ \  __\
+ \ \_____\
+  \/_____/</span><span class="ascii-letter"> ______
+/\  == \
+\ \  __&lt;
+ \ \_\ \_\
+  \/_/ /_/</span><span class="ascii-letter"> __
+/\ \
+\ \ \
+ \ \_\
+  \/_/</span><span class="ascii-letter"> ______
+/\  ___\
+\ \ \____
+ \ \_____\
+  \/_____/</span></span><span class="ascii-word ascii-sun" aria-hidden="true"><span class="ascii-letter">  ______
+ /\  ___\
+ \ \___  \
+  \/\_____\
+   \/_____/</span><span class="ascii-letter"> __  __
+/\ \/\ \
+\ \ \_\ \
+ \ \_____\
+  \/_____/</span><span class="ascii-letter"> __   __
+/\ "-.\ \
+\ \ \-.  \
+ \ \_\\"\_\
+  \/_/ \/_/</span></span></h1>
+        <p class="contact-line">Email: <a href="mailto:ericsun@seas.upenn.edu">ericsun@seas.upenn.edu</a><br>External: <a href="https://github.com/therealericsun" target="_blank" rel="noopener noreferrer">GitHub</a> <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank" rel="noopener noreferrer">LinkedIn</a> <a href="./Eric_Sun_Resume.pdf" download>Resume</a></p>
+      </div>
+      <div class="fluid-controls" role="group" aria-label="Fluid simulation controls">
+        <div class="fluid-actions">
+          <span>fluid:</span>
+          <button id="fluid-toggle" type="button" aria-pressed="false">pause</button>
+          <span aria-hidden="true">/</span>
+          <button id="fluid-reset" type="button">reset</button>
+        </div>
+        <label class="fluid-slider">speed <input id="fluid-speed" type="range" min="0.2" max="2.5" step="0.05" value="1" aria-valuetext="1.00×"></label>
+        <label class="fluid-slider">stir <input id="fluid-stir" type="range" min="0.35" max="1.8" step="0.05" value="1" aria-valuetext="1.00×"></label>
+        <div class="fluid-color-picker">
+          <span>dye</span>
+          <div class="fluid-color-value"><button id="fluid-palette-toggle" class="fluid-swatch" type="button" aria-label="Choose disturbance color" aria-expanded="false" aria-controls="fluid-palette"></button><span id="fluid-hex">#D23030</span></div>
+          <div id="fluid-palette" class="fluid-palette" role="group" aria-label="Disturbance colors" hidden></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="directory">
+      <div class="content-column">
+        <section class="group experience" aria-labelledby="experience-title">
+          <h2 id="experience-title">Experience:</h2>
+          <article>
+            <h3>Citadel <span class="role">· Quantitative Development Intern</span></h3>
+            <p class="meta">Jun 2026 - Aug 2026 · New York Metropolitan Area</p>
+            <p>Worked on natural gas risk valuation and deal booking systems using Python, C++, Celery, Redis, Kubernetes, Plotly, and Ag-Grid.</p>
+          </article>
+          <article>
+            <h3>AWS <span class="role">· Software Development Engineer Intern</span></h3>
+            <p class="meta">May 2025 - Aug 2025 · San Francisco, CA</p>
+            <p>Built machine learning pipelines and retrieval tools for quantum computing research workflows using AWS Bedrock, Prefect, PostgreSQL, SQLAlchemy, GraphQL, FastMCP, Docker, and Lambda.</p>
+          </article>
+        </section>
+
+        <div class="details">
+          <section class="group education-group" aria-labelledby="education-title">
+            <h2 id="education-title">Education:</h2>
+            <div class="education">
+              <h3>University of Pennsylvania</h3>
+              <p class="meta">August 2023 - May 2027 · Philadelphia, Pennsylvania</p>
+              <p>M.S. Physics, <em>Submatriculant (Joint B.A./M.S.)</em><br>B.A. Physics, <em>Conc. in Computational Techniques</em><br>B.S.E. Computer Science<br>Minor in Mathematics</p>
+              <p>GPA: 3.94 / 4.00<br>Vagelos Integrated Program in Energy Research (VIPER)</p>
+            </div>
+          </section>
+
+          <div class="skills">
+            <section class="skill-group" aria-labelledby="languages-title">
+              <h2 id="languages-title">Languages:</h2>
+              <p>Python, C, C++, FORTRAN, SQL</p>
+            </section>
+            <section class="skill-group" aria-labelledby="libraries-title">
+              <h2 id="libraries-title">Libraries:</h2>
+              <p>PyTorch, scikit-learn, NumPy, SciPy, Pandas, FastAPI, SQLAlchemy, Celery, Pybind11, Numba</p>
+            </section>
+            <section class="skill-group" aria-labelledby="tools-title">
+              <h2 id="tools-title">Tools:</h2>
+              <p>Git, Docker, PostgreSQL, Slurm, Kubernetes, Redis, CUDA, GraphQL, AWS</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer>© 2026 Eric Sun</footer>
+  </main>
+</body>
+</html>
