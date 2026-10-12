@@ -472,7 +472,7 @@
       if (lineAt(px, py, 3)) continue;
       const alpha = .92 * Math.min(1, amount / .08);
       boatCtx.fillStyle = `rgba(235,235,235,${alpha.toFixed(2)})`;
-      boatCtx.fillText(amount > .18 ? ':' : '.', px, py);
+      boatCtx.fillText('~', px, py);
     }
     boatCtx.restore();
   }
@@ -631,7 +631,7 @@
       nextDensity[i] = d * (solid ? .85 : 1);
       nextRed[i] = r * (solid ? .75 : 1);
       nextBlue[i] = b * (solid ? .75 : 1);
-      nextWake[i] = solid ? 0 : sample(wake, x - vx * .18, y - vy * .18) * .9;
+      nextWake[i] = solid ? 0 : sample(wake, x - vx * .18, y - vy * .18) * .88;
       const reach = Math.exp(-radius * radius / (rows * rows * .2 * .2))
         * vortexRamp * vortexStrength;
       const localSpin = reach * (.008 + twistSurge * .004);
