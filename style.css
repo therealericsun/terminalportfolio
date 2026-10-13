@@ -4,7 +4,7 @@
 #boat{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 #vortex-handle{position:fixed;left:72vw;top:54vh;z-index:2;transform:translate(-50%,-50%);appearance:none;border:0;padding:5px 3px;background:none;color:#bcbcbc;font:13px/1 Menlo,Monaco,"Apple Braille",monospace;cursor:grab;touch-action:none;user-select:none;text-shadow:0 0 7px #000}
 #vortex-handle[hidden]{display:none}#vortex-handle.dragging{cursor:grabbing}#vortex-handle:focus-visible{outline:1px solid #ddd;outline-offset:2px}#vortex-handle:hover{color:#fff}#vortex-handle span{display:block;white-space:pre}#vortex-handle.visible span{animation:vortex-arrive .65s cubic-bezier(.2,.7,.2,1) both}
-@keyframes vortex-arrive{from{opacity:0;transform:rotate(-540deg) scale(.3)}to{opacity:1;transform:rotate(0deg) scale(1)}}
+@keyframes vortex-arrive{from{opacity:0;transform:rotate(-900deg) scale(.3)}to{opacity:1;transform:rotate(0deg) scale(1)}}
 .intro-pending .page{visibility:hidden}
 .page{position:relative;z-index:1;max-width:1850px;min-height:100svh;margin:auto;padding:26px clamp(28px,3vw,60px) 16px;display:flex;flex-direction:column;text-shadow:0 0 5px #000,0 0 11px #000}
 .intro{display:flex;justify-content:space-between;align-items:flex-start;gap:30px;margin-bottom:30px}.intro-main{min-width:0;max-width:850px;flex:1}.intro h1{font-weight:400;margin:0 0 14px}.ascii-name{display:flex;align-items:flex-start;flex-wrap:wrap;gap:0 2ch;font:400 13px/1.2 Menlo,Monaco,Consolas,monospace;white-space:pre;letter-spacing:0}.ascii-word{display:flex;align-items:flex-start}.ascii-letter{display:block;white-space:pre}.intro p{margin:0 0 12px}.intro .contact-line{margin:0 0 12px}.intro .tagline{margin:0}.contact-line a{margin-right:10px}
