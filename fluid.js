@@ -10,6 +10,7 @@
 
   const cell = 18;
   const vortexStrength = .58;
+  const vortexDyeStrength = .8;
   const glyphs = ' .:-=+*#%@';
   let cols = 0, rows = 0, density, nextDensity, red, nextRed, blue, nextBlue;
   let ambientSurface, ambientWarm, ambientCool, wake, nextWake;
@@ -428,7 +429,7 @@
       const arm = Math.pow(Math.max(0, Math.sin(angle * 2.4 - distance * .22)), 2);
       const i = y * cols + x;
       density[i] = Math.min(1.2, density[i] + weight * (.22 + arm * .54) * amount);
-      blue[i] = Math.min(1, blue[i] + weight * (.2 + arm * .66) * amount);
+      blue[i] = Math.min(1, blue[i] + weight * (.2 + arm * .66) * amount * vortexDyeStrength);
       // The entrance curls inward instead of throwing the surface outward.
       flowX[i] += (-oy * .72 - ox * .28) / (distance + 2) * weight * 3.8 * amount;
       flowY[i] += (ox * .72 - oy * .28) / (distance + 2) * weight * 3.8 * amount;
@@ -623,7 +624,7 @@
       const seaSource = seaPattern(x, y, t) * .014;
       const d = Math.min(1.1, sample(density, backX, backY) * densityDecay
         + seaSource + source * vortexRamp * 1.3 * vortexStrength);
-      const sourceDye = source * .8;
+      const sourceDye = source * .8 * vortexDyeStrength;
       const r = Math.min(1, sample(red, backX, backY) * dyeDecay);
       const b = Math.min(1, sample(blue, backX, backY) * dyeDecay
         + sourceDye * vortexRamp * 1.3 * vortexStrength);
