@@ -11,10 +11,13 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
 
   const cell = 18;
   const glyphs = ' .:-=+*#%@';
+  const surfaceCutoff = .2;
+  const boatWake = [];
+  let wakeClock = 0;
   let cols = 0, rows = 0, water;
   let textSolid;
   let raf = 0, last = null, accumulator = 0, lastRender = -Infinity;
-  let ambientClock = 0;
+  let ambientClock = 0, ambientWarm = true;
   let textLines = [];
   let vortexAt = Infinity, vortexStart = Infinity;
   const pointer = { x: -100, y: -100, seen: false };
@@ -64,6 +67,7 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
     boat.visible = false;
     boat.heave = boat.heaveVelocity = boat.tilt = boat.tiltVelocity = 0;
     boat.popStart = Infinity;
+    boatWake.length = 0; wakeClock = 0;
     boatCtx?.clearRect(0, 0, innerWidth, innerHeight);
   }
 
@@ -220,7 +224,10 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
         + .35 * Math.sin(x * -.24 + y * .14);
     }
     water.closeFaces();
+    ambientClock = 0;
+    for (let i = 0; i < 3; i++) seedPassiveWave();
     accumulator = 0; last = null;
+    boatWake.length = 0; wakeClock = 0;
   }
 
   function stir(x, y, dx, dy, strength = 1, spread = 1, turbulence = 1) {
@@ -228,12 +235,90 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
       Math.max(22, 32 * spread), dx * 10 * turbulence, dy * 10 * turbulence);
   }
 
+  function seedPassiveWave() {
+    const x = innerWidth * (.08 + Math.random() * .84);
+    const y = innerHeight * (.08 + Math.random() * .84);
+    const radius = 28 + Math.random() * 34;
+    const angle = Math.random() * Math.PI * 2;
+    // Balanced physical crest/trough packets propagate, reflect, and move the
+    // hull. Their sparse sources keep the higher blank-cell cutoff meaningful.
+    water.splash(x, y, 1.6 + Math.random(), radius,
+      Math.cos(angle) * 5, Math.sin(angle) * 5, null);
+    const dye = ambientWarm ? water.red : water.blue;
+    ambientWarm = !ambientWarm;
+    const reach = radius * 2;
+    for (let iy = Math.max(0, Math.floor((y - reach) / cell)); iy < Math.min(rows, Math.ceil((y + reach) / cell)); iy++) {
+      for (let ix = Math.max(0, Math.floor((x - reach) / cell)); ix < Math.min(cols, Math.ceil((x + reach) / cell)); ix++) {
+        const i = iy * cols + ix;
+        if (water.solid[i]) continue;
+        const distance2 = ((ix + .5) * cell - x) ** 2 + ((iy + .5) * cell - y) ** 2;
+        dye[i] = Math.min(1, dye[i] + .25 * Math.exp(-distance2 / (radius * radius)));
+      }
+    }
+  }
+
+  function advanceBoatWake(dt, now) {
+    for (let i = boatWake.length - 1; i >= 0; i--) {
+      const point = boatWake[i];
+      point.age += dt;
+      const [vx, vy] = water.velocity(point.x, point.y);
+      // Keep a short visible trail while local currents curl its older crests.
+      point.x += vx * .28 * dt;
+      point.y += vy * .28 * dt;
+      const surface = -water.sample(water.height, point.x, point.y) * 3.2;
+      point.heave += (surface - point.heave) * (1 - Math.exp(-dt * 3));
+      if (point.age >= 1.4 || point.x < 0 || point.x > innerWidth
+        || point.y < 0 || point.y > innerHeight
+        || lineAt(point.x, point.y + point.heave, 3)) boatWake.splice(i, 1);
+    }
+    const speed = Math.hypot(boat.vx, boat.vy);
+    if (!boat.visible || innerWidth <= 650 || now - boat.popStart < 850 || speed < 8) {
+      wakeClock = 0; return;
+    }
+    wakeClock += dt;
+    if (wakeClock < .07) return;
+    wakeClock -= .07;
+    const cosine = Math.cos(boat.tilt), sine = Math.sin(boat.tilt);
+    const sternX = -28 * boat.facing, sternY = 12;
+    const x = boat.x + sternX * cosine - sternY * sine;
+    const y = boat.y + sternX * sine + sternY * cosine;
+    const [vx, vy] = water.velocity(x, y);
+    const slip = Math.hypot(boat.vx - vx, boat.vy - vy);
+    if (lineAt(x, y + boat.heave, 3)) return;
+    boatWake.push({ x, y, heave: boat.heave, age: 0,
+      strength: clamp(.3 + speed / 140 + slip / 100, .35, .95) });
+  }
+
+  function drawGridWake() {
+    // Rasterize the drifting trail onto exactly the same cells as the sea.
+    // Merge overlapping samples so each cell contains one white tilde.
+    const cells = new Map();
+    for (const point of boatWake) {
+      const x = Math.floor(point.x / cell), y = Math.floor((point.y + point.heave) / cell);
+      if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
+      const i = y * cols + x;
+      if (water.solid[i]) continue;
+      const alpha = point.strength * (1 - point.age / 1.4) ** 1.4;
+      if (alpha < .025) continue;
+      cells.set(i, Math.max(cells.get(i) || 0, alpha));
+    }
+    boatCtx.save();
+    boatCtx.font = '10px Menlo, Monaco, Consolas, monospace';
+    boatCtx.textAlign = 'center'; boatCtx.textBaseline = 'middle';
+    for (const [i, alpha] of cells) {
+      const x = (i % cols + .5) * cell, y = (Math.floor(i / cols) + .5) * cell;
+      if (lineAt(x, y, 3)) continue;
+      boatCtx.fillStyle = `rgba(235,235,235,${alpha.toFixed(2)})`;
+      boatCtx.fillText('~', x, y);
+    }
+    boatCtx.restore();
+  }
+
   function advancePhysics(dt, now) {
     ambientClock += dt;
-    if (ambientClock >= 2.3) {
-      ambientClock -= 2.3;
-      water.splash(Math.random() * innerWidth, Math.random() * innerHeight,
-        .3 + Math.random() * .45, 32 + Math.random() * 45, 0, 0, null);
+    if (ambientClock >= 1.6) {
+      ambientClock -= 1.6;
+      seedPassiveWave();
     }
     if (now >= vortexAt && vortexStart === Infinity) {
       vortexStart = now;
@@ -257,6 +342,7 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
       if (boat.vx > 3) boat.facing = 1;
       else if (boat.vx < -3) boat.facing = -1;
     } else water.pressure.fill(0);
+    advanceBoatWake(dt, now);
   }
 
   function drawWater() {
@@ -276,8 +362,11 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
       // Crests, troughs, and slopes all come from the same surface the hull reads.
       const light = clamp(.065 + Math.max(0, height) * .14 + slope * .24
         + Math.max(0, -height) * .035 + foam * .4, 0, .95);
-      const level = Math.min(glyphs.length - 1, Math.floor(light * glyphs.length));
-      if (!level && warm + cool < .06) continue;
+      // Reserve the low end for blank cells; dye from active disturbances may
+      // still reveal a faint glyph below the surface threshold.
+      const visibleLight = clamp((light - surfaceCutoff) / (1 - surfaceCutoff), 0, 1);
+      const level = Math.min(glyphs.length - 1, Math.floor(visibleLight * glyphs.length));
+      if (!level && warm + cool < .16) continue;
       const tint = Math.min(1, (warm + cool) * 1.6), share = warm + cool || 1;
       const r = Math.round(230 + ((210 * warm + 84 * cool) / share - 230) * tint);
       const g = Math.round(230 + ((48 * warm + 132 * cool) / share - 230) * tint);
@@ -291,6 +380,7 @@ import { Water, PHYSICS_DT, stepBoat } from './water.js';
     if (!boatCtx) return;
     boatCtx.clearRect(0, 0, innerWidth, innerHeight);
     if (!boat.visible || innerWidth <= 650) return;
+    drawGridWake();
     const pop = clamp((time - boat.popStart) / 850, 0, 1);
     const rise = 1 - (1 - pop) ** 3;
     boatCtx.save();
