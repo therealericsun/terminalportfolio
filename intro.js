@@ -1,109 +1,51 @@
-// Staggered text scramble inspired by the entrance on ertdfgcvb.xyz.
-(() => {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.documentElement.classList.remove('intro-pending');
-    return;
-  }
-
-  const main = document.querySelector('main');
-  const root = document.documentElement;
-  const targets = document.querySelectorAll('.intro-main, .directory, footer');
-  const glyphs = './\\|_-=+*#%@;:<>[]{}0123456789';
-  const boatEntranceAt = 800;
-  const textEntranceAt = 2000;
-  let priorNodes = [];
-  let raf = 0;
-  const scramble = () => glyphs[Math.floor(Math.random() * glyphs.length)];
-
-  function playIntro() {
-    root.classList.add('intro-pending');
-    cancelAnimationFrame(raf);
-    for (const entry of priorNodes) entry.node.textContent = entry.original;
-
-    const nodes = [];
-    const pulses = [];
-    const range = document.createRange();
-    let glyphCount = 0, latestReveal = 0;
-    for (const target of targets) {
-      const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+// Stagger the scramble across the whole portfolio without hiding the HTML,
+// replacing elements, changing link targets, or disturbing the text layout.
+const symbols = './\\|_-=+*#%@;:<>[]{}0123456789';
+const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const clamp = v => Math.max(0, Math.min(1, v));
+const smooth = v => { v = clamp(v); return v * v * (3 - 2 * v); };
+export class Entrance {
+  constructor(main, reduced = false) {
+    this.elapsed = 0; this.finished = false; this.lastFrame = -1; this.nodes = [];
+    if (main) {
+      const root = main.getBoundingClientRect(), range = document.createRange();
+      const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+      let index = 0;
       while (walker.nextNode()) {
-        const node = walker.currentNode;
-        const original = node.textContent;
+        const node = walker.currentNode, original = node.textContent;
         if (!original.trim()) continue;
-        const chars = Array.from(original);
-        const revealAt = chars.map((char, index) => {
-          if (/\s/.test(char)) return 0;
-          range.setStart(node, index);
-          range.setEnd(node, index + char.length);
+        const ascii = Boolean(node.parentElement.closest('.ascii-name'));
+        const chars = [...original], delays = []; let offset = 0;
+        for (const char of chars) {
+          range.setStart(node, offset); offset += char.length; range.setEnd(node, offset);
           const box = range.getBoundingClientRect();
-          const parent = node.parentElement.getBoundingClientRect();
-          const x = box.width ? box.left : parent.left;
-          const y = box.height ? box.top : parent.top;
-          const delay = 120 + Math.random() * 820;
-          latestReveal = Math.max(latestReveal, delay);
-          glyphCount++;
-          if (box.width && (index === Math.floor(chars.length / 2) || glyphCount % 14 === 0)) {
-            const heading = node.parentElement.closest('h1, h2, h3');
-            pulses.push({ at: delay, x: x + box.width / 2, y: y + box.height / 2,
-              strength: heading ? 1.75 : 1.45 });
-          }
-          return delay;
-        });
-        nodes.push({ node, original, chars, revealAt });
+          delays.push(.10 + clamp((box.top - root.top) / root.height) * .45
+            + clamp((box.left - root.left) / root.width) * .25 + (index++ % 7) * .008);
+        }
+        this.nodes.push({ node, original, chars, delays, ascii, index });
       }
     }
-    range.detach();
-    priorNodes = nodes;
-    if (!nodes.length) { root.classList.remove('intro-pending'); return; }
-    pulses.sort((a, b) => a.at - b.at);
-    let nextPulse = 0, lastFrame = -Infinity;
-    let boatShown = false, textStarted = false;
-    main.setAttribute('aria-busy', 'true');
-    const start = performance.now();
-
-    function frame(now) {
-      const sceneElapsed = now - start;
-      if (!boatShown && sceneElapsed >= boatEntranceAt) {
-        boatShown = true;
-        dispatchEvent(new Event('portfolio:boat-pop'));
-      }
-      if (sceneElapsed < textEntranceAt) {
-        raf = requestAnimationFrame(frame);
-        return;
-      }
-      if (!textStarted) {
-        textStarted = true;
-        root.classList.remove('intro-pending');
-        dispatchEvent(new Event('portfolio:text-start'));
-      }
-      const elapsed = sceneElapsed - textEntranceAt;
-      if (elapsed - lastFrame >= 42 || elapsed >= latestReveal) {
-        lastFrame = elapsed;
-        for (const entry of nodes) {
-          if (elapsed >= latestReveal) {
-            entry.node.textContent = entry.original;
-            continue;
-          }
-          entry.node.textContent = entry.chars.map((char, i) =>
-            elapsed >= entry.revealAt[i] ? char : /\s/.test(char) ? char : scramble()
-          ).join('');
-        }
-        const settled = [];
-        while (nextPulse < pulses.length && pulses[nextPulse].at <= elapsed) {
-          settled.push(pulses[nextPulse++]);
-        }
-        if (settled.length) dispatchEvent(new CustomEvent('portfolio:text-glitch', { detail: settled }));
-      }
-      if (elapsed < latestReveal) raf = requestAnimationFrame(frame);
-      else {
-        raf = 0;
-        main.removeAttribute('aria-busy');
-        dispatchEvent(new Event('portfolio:intro-text-complete'));
-      }
-    }
-    frame(start);
+    if (reduced) this.finish();
   }
-
-  addEventListener('portfolio:reset-intro', playIntro);
-  playIntro();
-})();
+  get boatProgress() { return smooth((this.elapsed - .16) / .85); }
+  get vortexProgress() { return smooth((this.elapsed - 1.0) / 1.6); }
+  update(dt) {
+    const before = this.elapsed; this.elapsed += dt;
+    const launch = before < .26 && this.elapsed >= .26;
+    if (!this.finished && this.elapsed - this.lastFrame > 1 / 24) {
+      this.lastFrame = this.elapsed;
+      for (const entry of this.nodes) {
+        const glyphs = entry.ascii ? symbols : letters;
+        entry.node.textContent = entry.chars.map((char, n) => {
+          // Keep punctuation and whitespace in prose, preserving word wrapping.
+          if ((entry.ascii ? /\s/.test(char) : !/[A-Za-z0-9]/.test(char)) || this.elapsed >= entry.delays[n] + .24) return char;
+          return glyphs[(Math.floor(this.elapsed * 28) + n * 7 + entry.index * 11) % glyphs.length];
+        }).join('');
+      }
+      if (this.elapsed >= 1.2) this.finishText();
+    }
+    return launch;
+  }
+  finishText() { for (const n of this.nodes) n.node.textContent = n.original; this.finished = true; }
+  finish() { this.elapsed = 3; this.finishText(); }
+}
