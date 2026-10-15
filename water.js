@@ -141,7 +141,10 @@ export class Water {
       const zL = bed[left >= 0 ? left : inside] + pressure[left >= 0 ? left : inside];
       const zR = bed[right >= 0 ? right : inside] + pressure[right >= 0 ? right : inside];
       if (left < 0 || right < 0) {
-        if (this.boundaries === 'closed' || (axis === 0 && left < 0)) {
+        // Continue the coast beyond the top/bottom with no cross-edge
+        // transport. Extrapolated side flow drained the recessed lower beach;
+        // incoming and outgoing ocean waves still use the open right edge.
+        if (this.boundaries === 'closed' || axis === 1 || left < 0) {
           if (left < 0) qL = -qR; else qR = -qL;
         } else if (axis === 0 && right < 0) {
           // Outgoing characteristic comes from inside; only the incoming one

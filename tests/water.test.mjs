@@ -317,3 +317,49 @@ test('a compact vortex circulates gently without excavating a dead basin', () =>
   assert.ok(Math.min(...water.depth)>15,'rotation must not carve the former deep, flat glyph basin');
   assert.ok(Math.hypot(...water.velocity(495,270))>40&&Math.hypot(...water.velocity(495,270))<65,'circulation must remain visible without the former overpowering current');
 });
+
+test('coastal continuation edges preserve resting sea level around a curved coast', () => {
+  const terrain = new Terrain(1024, 480, { mobile: false, profile: [
+    { top: 20, bottom: 180, right: 485 }, { top: 240, bottom: 320, right: 400 }
+  ] });
+  const water = new Water(62, 40, 12, { terrain, originX: 288, boundaries: 'open', waves: false });
+  const before = water.depth.slice();
+  for (let n = 0; n < 600; n++) water.step();
+  assert.ok(water.depth.every((h, i) => Math.abs(h - before[i]) < 1e-10));
+  assert.ok(water.flowX.every(u => Math.abs(u) < 1e-10));
+  assert.ok(water.flowY.every(u => Math.abs(u) < 1e-10));
+});
+
+test('natural surf keeps washing every part of a full-height text-shaped beach', () => {
+  // Narrow desktop layout: the lower shore recedes around shorter text lines.
+  const terrain = new Terrain(1024, 1032, { mobile: false, profile: [
+    { top: 26, bottom: 181, right: 312 }, { top: 226, bottom: 259, right: 453 },
+    { top: 291, bottom: 399, right: 445 }, { top: 440, bottom: 551, right: 485 },
+    { top: 661, bottom: 694, right: 399 }, { top: 757, bottom: 901, right: 446 },
+    { top: 914, bottom: 948, right: 469 }, { top: 998, bottom: 1011, right: 130 }
+  ] });
+  const water = new Water(60, 86, 12, { terrain, originX: 312, boundaries: 'open' });
+  water.initializeSurf();
+  const bands = Array.from({ length: 4 }, () => ({ max: 0, min: Infinity, exposed: new Set(), renewed: new Set() }));
+  for (let n = 0; n < 3600; n++) {
+    water.step();
+    if (n < 1800 || n % 12) continue;
+    const runup = [0, 0, 0, 0];
+    for (let y = 0; y < water.rows; y++) for (let x = 0; x < water.cols; x++) {
+      const i = y * water.cols + x, d = terrain.distance(312 + (x + .5) * 12, (y + .5) * 12);
+      if (d >= 0 || d < -80) continue;
+      const band = Math.min(3, Math.floor(y / water.rows * 4)), state = bands[band];
+      if (water.depth[i] < .08) state.exposed.add(i);
+      if (water.depth[i] > .28) {
+        runup[band] = Math.max(runup[band], -d);
+        if (state.exposed.has(i)) state.renewed.add(i);
+      }
+    }
+    bands.forEach((state, b) => { state.max = Math.max(state.max, runup[b]); state.min = Math.min(state.min, runup[b]); });
+  }
+  bands.forEach((state, b) => {
+    assert.ok(state.max > 35, `shore quarter ${b + 1} must receive visible wash: ${state.max}`);
+    assert.ok(state.max - state.min > 12, `shore quarter ${b + 1} must advance and recede`);
+    assert.ok(state.renewed.size > 10, `shore quarter ${b + 1} must rewet after startup: ${state.renewed.size}`);
+  });
+});

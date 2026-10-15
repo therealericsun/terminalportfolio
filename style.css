@@ -17,7 +17,7 @@
 @keyframes vortex-arrive{from{opacity:0;transform:rotate(-720deg) scale(.3)}to{opacity:1;transform:rotate(0) scale(1)}}
 @media(max-width:900px),(prefers-reduced-motion:reduce){#vortex-handle{display:none}}
 
-.intro-main,.group,.skill-group{background:#000}footer{width:fit-content;background:#000}
+footer{width:fit-content}
 
 #boat-handle{position:absolute;z-index:3;width:70px;height:60px;transform:translate(-50%,-50%);border:0;padding:0;background:transparent;cursor:grab;touch-action:none;user-select:none;border-radius:6px}
 #boat-handle[hidden]{display:none}#boat-handle.dragging{cursor:grabbing}#boat-handle:focus-visible{outline:1px dashed #999;outline-offset:2px}
