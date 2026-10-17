@@ -1,6 +1,7 @@
 :root {
   --bg: #080609; --text: #dfd2b9; --cream: #fff2cd; --gold: #ffd16e;
   --accent: #f8922e; --muted: #ae9577; --faint: #947b60; --rule: #75512d;
+  --window-bg: #080607; --window-titlebar-bg: #0c0808;
   --scene-shadow: #541a0e; --scene-ember: #c44213;
   color-scheme: dark; background: var(--bg); color: var(--text);
   font: 13px/1.34 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -40,8 +41,8 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--gold); outline-
 .skill-group p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
 footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; color: var(--faint); }
 
-.terminal-window { border: 1px solid color-mix(in srgb,var(--rule) 72%,var(--bg)); border-radius: 0; background: color-mix(in srgb,var(--bg) 97%,var(--accent)); overflow: hidden; }
-.window-titlebar { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); background: color-mix(in srgb,var(--bg) 94%,var(--accent)); font-size: 10px; line-height: 1; color: var(--faint); user-select: none; }
+.terminal-window { border: 1px solid color-mix(in srgb,var(--rule) 72%,var(--bg)); border-radius: 0; background: var(--window-bg); overflow: hidden; }
+.window-titlebar { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); background: var(--window-titlebar-bg); font-size: 10px; line-height: 1; color: var(--faint); user-select: none; }
 .window-prompt { color: var(--accent); letter-spacing: -.05em; }
 .window-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .window-chrome { color: var(--rule); letter-spacing: .18em; white-space: nowrap; }

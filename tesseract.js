@@ -26,7 +26,8 @@ const palette = Array.from({ length: 40 }, (_, i) => {
   const fraction = position - low;
   return `rgb(${stops[low].map((value, channel) => Math.round(value + (stops[low + 1][channel] - value) * fraction)).join(',')})`;
 });
-const rotationSpeed = 2;
+// Rebase the slider: 1× is the previous 2× rotation rate.
+const rotationSpeed = 4;
 const orientation = initialOrientation();
 const settings = { speed: 1, depth: 5, detail: .5, followMouse: true };
 const followMouseToggle = document.querySelector('#mouse-follow');
