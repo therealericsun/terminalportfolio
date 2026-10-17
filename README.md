@@ -1,34 +1,34 @@
-# Eric Sun
+# Eric Sun — ASCII tesseract portfolio
 
-A single-page portfolio with an interactive ASCII ocean. The text is visible immediately, even without JavaScript. A quiet black beach follows a loose envelope of the text, with at least 100px of clearance from the nominal waterline. Text sections have transparent backgrounds so they cannot cut rectangular holes in the beach. Below 900px the full-width portfolio is followed by a 280px beach scene; the boat is hidden.
+A single-page portfolio with an animated, shaded ASCII tesseract. The portfolio and simulation share a near-black, ember orange, gold and cream palette. The text is visible immediately, even without JavaScript. No additional runtime dependencies.
 
-The scene starts with established incoming surf and wet sand. Moderate natural crests have bright blue highlights that fade toward monochrome as they move inward; mouse disturbances retain bright red highlights and fade more slowly. The boat and vortex marker are bright white. Lower sea brightness keeps the white boat and whirlpool marker distinct. The sand has no decorative ASCII objects. An offshore whirlpool has a gentler compact core and a brighter blue spiral around its white marker, with forcing reach capped at 180px. It circulates nearby water and carries the boat around the ocean. Its ASCII marker can be dragged or moved with the arrow keys.
-
-`terrain.js` supplies one coastline, sloping seabed, beach elevation, shoreline normals, and boat clearance. `water.js` evolves water depth and two momenta on a 12px grid using conservative finite-volume HLL fluxes, hydrostatic reconstruction, limited free-surface/velocity reconstruction, second-order Runge–Kutta sweeps, and CFL substeps. Reconstruction falls back to first order beside dry cells and in thin films so wash can drain instead of becoming stranded on the slope. The method follows [Audusse et al., hydrostatic reconstruction](https://publications.imp.fu-berlin.de/478/1/file_2004_siam.pdf). This is a stylized depth-averaged model without overturning waves or deep-water dispersion.
-
-Waves are driven only by the incoming characteristic on the right edge, with slowly changing phase, amplitude, and wavefront curvature. Its mean-flux correction follows the local wavefront amplitude so weak sections do not steadily draw water off the beach. The outgoing characteristic is taken from the interior, allowing outgoing waves to escape. The top and bottom continue the coast with zero normal transport, preventing alongshore leakage from draining the recessed lower beach. The right ocean edge remains open to incoming and outgoing waves. Vortex forcing supplies both tangential circulation and its inward curvature, keeping rotation compact without excavating a large surface depression that blocks surf. Shallow compression and breaking fronts produce white foam. A lower, gently sloping, partly submerged foreshore receives small swells while the upper sand emerges between crests. Wet sand fades over about a minute, so the coast remains visibly damp between fresh washes; foam and real water depth still advance and drain back.
-
-The 18px ASCII renderer uses the height/slope lighting and full glyph ramp from the last pushed version (`2e0449c`, matching local sketch commit `920bd86`). Mouse movement launches a compact, volume-balanced crest/trough (32px radius, up to 1.25 depth units) and outward water momentum, with immediate visual feedback. Mouse motion emits at most 25 impulses per second to prevent rapid events from stacking excessive energy. Drag gestures add gentle directional water momentum; the boat samples that same moving water. Depth-weighted impulse participation keeps shallow tails from suppressing the offshore wave. Foam forms on weak shallow advancing fronts as well as stronger breakers and remains visible on thin wash, with small splash flecks as waves break onto sand. It only disturbs wet cells and preserves volume. The boat uses four hull samples, acceleration of the actual current along the hull’s path, buoyancy, tilt, and a 0.12-second drag response. Lighter hull loading and reaction let waves move it without its own pressure field dragging it into the whirlpool core. It starts at the local flow velocity and turns toward sustained current, rather than flipping on every crest. Its position integrates the average velocity over each step so curved trajectories do not artificially tighten. Stronger damping settles its bobbing and tilt. Hull reaction is distributed smoothly across grid cells, and shore and viewport contacts reflect the hull with a brief recovery so it clears the boundary. Only the solid seabed and screen edges cause collisions; transient water depressions, including troughs left by a moved vortex, never act as obstacles. The collision box follows the visible viewport, not the full page height. Drag the boat directly within deep ocean water, or move it with arrow keys; invalid sand/shallow positions are rejected and release adds no throw impulse. Hull loading and drag react back onto the water. A short white grid-aligned wake follows the stern. Terrain clearance keeps the hull in deep water.
-
-The whole portfolio briefly scrambles in a staggered sweep; the boat rises through a small red splash, and the whirlpool marker unfurls with two turns. Portfolio text and links are immediately readable. The entrance lasts about 2.6 seconds, does not replay on resize, and is skipped for reduced motion.
-
-Physics runs at 60Hz with adaptive solver substeps. The boat draws each frame and sea glyphs draw at roughly 20Hz, with immediate updates on pointer input. Hidden tabs pause without catch-up. Reduced-motion visitors receive a static established beach scene.
-
-## Local preview
+## Development
 
 ```sh
 npm run dev
 ```
 
-Open <http://127.0.0.1:8765/>. Python 3 and Node.js are only needed for local development; the website has no runtime dependencies or build step.
+Open <http://127.0.0.1:8765/>. The site uses plain HTML, CSS and JavaScript and needs no build step or package installation.
+
+## Rendering and behavior
+
+The geometry has 16 vertices, 32 cylindrical edges and 24 translucent square faces. Independent rotations in the XW, YW and ZW planes produce the changing 4-D perspective projection; the result also rotates in 3-D. A software character rasterizer uses perspective-correct depth, lightly shaded faces with sparse diagonal hatching, depth-tested struts, spherical joints, Lambert diffuse and Blinn specular lighting. Brightness selects both glyph density and a shared ember, orange, gold and cream palette. Shading uses geometric normals and a fixed upper-left light.
+
+On first appearance, a 2.6-second assembly sequence sparks the vertices, traces the edges from both ends, and sweeps shimmering characters across the faces. Rotation eases into its normal speed. The sequence waits until the scene enters the viewport, pauses offscreen, survives resizing without replaying, and is skipped for reduced motion or direct dragging.
+
+The scene is the only visual element beside the portfolio; there are no captions or buttons. Drag it to orbit. On desktop the portfolio content is vertically centered beside the simulation, with the copyright kept at the bottom. On narrow screens the scene follows the portfolio. The default rotation runs at twice the original speed. The animation draws at 30 fps, caps backing-store density at 2×, suspends when hidden or offscreen, and stays static for reduced-motion visitors. Mobile vertical swipes remain available for scrolling.
+
+`tesseract-math.js` owns the geometry/projection and `tesseract.js` owns rendering and interaction. `style.css` contains the variant layout. The renderer shares the body’s font family and weight, with smaller 8–11px characters and compact line spacing for a denser animation.
+
+## Validation
 
 ```sh
 npm run check
 npm test
 ```
 
-The tests cover resting water over a slope, closed-domain volume conservation, nonnegative depth, wetting followed by drying between crests, incoming direction, text-envelope terrain, pointer color and volume, disturbance-to-boat coupling, grounding prevention, initialized surf, and two simulated minutes of combined surf/hull/pointer stability with the vortex active. Additional checks verify that a floating hull follows a rotating current through all four quadrants and remains still in resting water at arbitrary grid offsets. Further checks cover viewport and shore bounces, deep-water-only placement, fast settling and current reversal, compact vortex forcing, gentle natural crest amplitude, and passage through residual vortex troughs without false shore collisions, sustained wash after startup, and wet-sand tracking on the lower foreshore, delayed gentle mouse-wave breaking on the wet foreshore, weak-ripple beach breaking, all four mouse-stroke directions, and small, bounded click-driven boat displacement and bobbing, and controlled circulation without a deep dead basin. Full-height text-shaped coast tests verify that every shore quarter keeps receiving fresh wash, recedes, and rewets after startup; resting sea level is also checked with the coastal continuation edges.
+Tests cover topology, rotation invariance, projection bounds and directional lighting, alongside the retained beach simulation tests.
 
 ## Deployment
 
-The Pages workflow copies HTML, CSS, `fluid.js`, `water.js`, `terrain.js`, `intro.js`, favicon, resume, and domain configuration into the deployment artifact. Changes are not published until explicitly pushed.
+Pushing to `main` runs validation and deploys the homepage and its static assets to GitHub Pages. `CNAME` retains the custom domain. The earlier beach renderer and physics sources remain available in Git history and the repository but are not shipped by the deployment workflow.

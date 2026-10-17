@@ -3,21 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#080609">
   <meta name="description" content="Eric Sun — Physics and Computer Science at the University of Pennsylvania.">
   <title>Eric Sun</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./fluid.js"></script>
+  <script type="module" src="./tesseract.js"></script>
 </head>
 <body>
-  <button id="boat-handle" type="button" aria-label="Sailboat. Drag within the ocean, or move with arrow keys" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight" hidden></button>
-  <button id="vortex-handle" type="button" aria-label="Whirlpool source. Drag to move, or use arrow keys" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight" hidden><span aria-hidden="true">    .aPPb.
- ,aP'    `Yb
- d' ,aP'   8
- 8  8     ,P
- Yb `YaaadP'
-  `Yba.__</span></button>
   <main class="page">
     <header class="intro">
       <div class="intro-main">
@@ -101,9 +94,9 @@
     </div>
     <footer>© 2026 Eric Sun</footer>
   </main>
-  <div id="beach-scene" role="img" aria-label="An ASCII beach with incoming surf and an offshore sailboat">
-    <canvas id="fluid" aria-hidden="true"></canvas>
-    <canvas id="boat" aria-hidden="true"></canvas>
-  </div>
+  <figure id="tesseract-scene" aria-label="Animated ASCII tesseract">
+    <canvas id="tesseract" role="img" aria-label="A shaded ASCII tesseract rotating through four dimensions"></canvas>
+    <noscript><p class="scene-fallback">Enable JavaScript to see the rotating ASCII tesseract.</p></noscript>
+  </figure>
 </body>
 </html>
