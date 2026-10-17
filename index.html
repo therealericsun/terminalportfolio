@@ -18,7 +18,7 @@
 <body>
   <main class="page">
     <div class="terminal-window portfolio-window">
-      <div class="window-titlebar" aria-hidden="true"><span class="window-prompt">&gt;_</span><span class="window-title">~/portfolio</span><span class="window-chrome">─ □ ×</span></div>
+      <div class="window-titlebar" aria-hidden="true"><span class="window-prompt">&gt;_</span><span class="window-title">~/info</span><span class="window-chrome">─ □ ×</span></div>
       <div class="terminal-body">
     <header class="intro">
       <div class="intro-main">
@@ -74,18 +74,18 @@
     </div>
       </div>
     </div>
-    <figure id="tesseract-scene" aria-label="Animated ASCII tesseract">
-      <canvas id="tesseract" role="img" aria-label="A shaded ASCII tesseract rotating through four dimensions" aria-describedby="rotation-help"></canvas>
+    <figure id="tesseract-scene" aria-label="Animated ASCII 4D polytope">
+      <canvas id="tesseract" role="img" aria-label="A shaded ASCII polytope rotating through four dimensions" aria-describedby="rotation-help"></canvas>
       <noscript><p class="scene-fallback">Enable JavaScript to see the rotating ASCII tesseract.</p></noscript>
     </figure>
     <footer>© 2026 Eric Sun</footer>
   </main>
-  <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="Tesseract settings">
-    <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-prompt" aria-hidden="true">&gt;_</span><span class="window-title">~/tesseract/settings</span><span class="drawer-hint" aria-hidden="true">open</span><span class="drawer-arrow" aria-hidden="true">↑</span></button>
+  <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="4D renderer settings">
+    <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-prompt" aria-hidden="true">&gt;_</span><span class="window-title">~/render/settings</span><span class="drawer-hint" aria-hidden="true">open</span><span class="drawer-arrow" aria-hidden="true">↑</span></button>
     <div id="drawer-content" class="controls-body drawer-content" inert aria-hidden="true">
       <p id="rotation-help" class="sr-only">Follow mouse is enabled by default: move the mouse to rotate in XZ and YZ without holding a button. Disable it to use click-and-drag. Hold Shift to drag in XW and YW. The six angle sliders provide keyboard control of every rotation plane.</p>
       <section class="rotation-section" aria-labelledby="rotation-heading">
-      <div class="panel-heading"><span id="rotation-heading">rotation</span><div class="panel-actions"><button id="rotation-toggle" type="button" aria-pressed="false">pause</button><span aria-hidden="true">/</span><button id="rotation-reset" type="button">reset</button></div></div>
+      <div class="panel-heading"><span id="rotation-heading">rotation</span><div class="panel-actions"><button id="rotation-reset" type="button">reset</button></div></div>
       <div class="angle-controls" role="group" aria-label="Rotation planes">
         <label class="setting" for="angle-xy"><span class="setting-heading"><span>XY-angle</span><output id="value-xy" for="angle-xy">0°</output></span><input id="angle-xy" data-plane="xy" type="range" min="0" max="360" step="0.1" value="0" aria-label="XY-angle"></label>
         <label class="setting" for="angle-xz"><span class="setting-heading"><span>XZ-angle</span><output id="value-xz" for="angle-xz">0°</output></span><input id="angle-xz" data-plane="xz" type="range" min="0" max="360" step="0.1" value="0" aria-label="XZ-angle"></label>
@@ -94,14 +94,23 @@
         <label class="setting" for="angle-yw"><span class="setting-heading"><span>YW-angle</span><output id="value-yw" for="angle-yw">0°</output></span><input id="angle-yw" data-plane="yw" type="range" min="0" max="360" step="0.1" value="0" aria-label="YW-angle"></label>
         <label class="setting" for="angle-zw"><span class="setting-heading"><span>ZW-angle</span><output id="value-zw" for="angle-zw">0°</output></span><input id="angle-zw" data-plane="zw" type="range" min="0" max="360" step="0.1" value="0" aria-label="ZW-angle"></label>
       </div>
+      <div class="rotation-speed">
+        <label class="setting" for="rotation-speed"><span class="setting-heading"><span>speed</span><output id="value-speed" for="rotation-speed">1.0×</output></span><input id="rotation-speed" type="range" min="0" max="3" step="0.1" value="1" aria-label="Rotation speed"></label>
+      </div>
+      <div class="rotation-options">
+        <label class="checkbox-setting" for="auto-rotate"><input id="auto-rotate" type="checkbox" checked><span>auto rotate</span></label>
+        <label class="checkbox-setting" for="mouse-follow"><input id="mouse-follow" type="checkbox" checked><span>follow mouse</span></label>
+      </div>
       </section>
       <section class="settings-section" aria-labelledby="settings-heading">
         <div class="panel-heading"><span id="settings-heading">settings</span></div>
         <div class="extra-settings">
-        <label class="setting" for="rotation-speed"><span class="setting-heading"><span>speed</span><output id="value-speed" for="rotation-speed">1.0×</output></span><input id="rotation-speed" type="range" min="0" max="3" step="0.1" value="1" aria-label="Rotation speed"></label>
         <label class="setting" for="projection-depth"><span class="setting-heading"><span>4D perspective</span><output id="value-depth" for="projection-depth">5.0</output></span><input id="projection-depth" type="range" min="3" max="7" step="0.1" value="5.0" aria-label="4D perspective distance"></label>
         <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">50%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="50" aria-label="Face texture amount"></label>
-        <label class="mouse-follow" for="mouse-follow"><input id="mouse-follow" type="checkbox" checked><span>follow mouse</span></label>
+        <form id="shape-form" class="seed-control">
+          <label for="shape-seed">random seed</label>
+          <div class="seed-row"><input id="shape-seed" type="text" value="" maxlength="64" autocomplete="off" spellcheck="false" aria-description="Enter a seed to reproduce a shape. Regenerate rolls a new seed when the current seed is unchanged."><button type="submit">regenerate</button></div>
+        </form>
         </div>
       </section>
 

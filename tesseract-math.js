@@ -31,8 +31,8 @@ export function advanceOrientation(orientation, dt, planes = rotationPlanes) {
   const rates = { xy: .025, xz: .08, yz: .02, xw: .12, yw: .07, zw: .05 };
   for (const plane of planes) orientation[plane] = wrapAngle(orientation[plane] + dt * rates[plane]);
 }
-export function projectOrientation(orientation, distance = 3.8) {
-  return vertices.map(vertex => {
+export function projectOrientation(orientation, distance = 3.8, sourceVertices = vertices) {
+  return sourceVertices.map(vertex => {
     let p = rotate(vertex, 0, 3, orientation.xw);
     p = rotate(p, 1, 3, orientation.yw);
     p = rotate(p, 2, 3, orientation.zw);
@@ -61,8 +61,8 @@ const screenRadiusFor = distance => {
 const projectionFits = new Map([[3.8, 1]]);
 export function camera(point, width, height, cellAspect, distance = 3.8) {
   const perspective = 7.8 / (7.8 - point[2]);
-  // A fixed scale avoids breathing as the tesseract turns.
-  // Changing 4-D perspective changes the nested cubes' proportions. Compensate
+  // A fixed scale avoids breathing as the polytope turns.
+  // Changing 4-D perspective changes the shape's proportions. Compensate
   // for their bounding sphere so every slider combination stays in frame.
   if (!projectionFits.has(distance)) projectionFits.set(distance, screenRadiusFor(3.8) / screenRadiusFor(distance));
   const fit = projectionFits.get(distance);

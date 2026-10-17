@@ -1,4 +1,5 @@
-import { edges, faces, projectOrientation, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js';
+import { projectOrientation, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js';
+import { generatePolytope } from './polytope.js';
 import { Entrance } from './intro.js';
 import { initAsciiName } from './ascii-name.js';
 
@@ -30,7 +31,12 @@ const palette = Array.from({ length: 40 }, (_, i) => {
 // Rebase the slider: 1× is the previous 2× rotation rate.
 const rotationSpeed = 4;
 const orientation = initialOrientation();
-const settings = { speed: 1, depth: 5, detail: .5, followMouse: true };
+const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+const initialSeed = randomSeed();
+const settings = { speed: 1, depth: 5, detail: .5, followMouse: true, seed: initialSeed };
+let shape = generatePolytope(settings.seed);
+const seedInput = document.querySelector('#shape-seed');
+seedInput.value = settings.seed;
 const followMouseToggle = document.querySelector('#mouse-follow');
 const extraPlanes = ['xw', 'yw', 'zw'];
 const drawer = document.querySelector('#settings-drawer');
@@ -42,7 +48,7 @@ else drawer.classList.add('is-entering');
 const drawerToggle = document.querySelector('#drawer-toggle');
 const drawerContent = document.querySelector('#drawer-content');
 const sliders = [...drawer.querySelectorAll('input[type="range"]')];
-const toggle = document.querySelector('#rotation-toggle');
+const autoRotateToggle = document.querySelector('#auto-rotate');
 let width = 0, height = 0, cols = 0, rows = 0, cellW = 0, cellH = 0;
 let edgeDepth, edgeLight, edgeGlyph, surfaceDepth, surfaceLight, surfaceHatch;
 let time = 0, frame = 0, previous = 0, accumulator = 0, activeControl = null;
@@ -121,20 +127,19 @@ function draw() {
   // This clock advances only while the scene is visible, independently of the
   // faster simulation clock, and is never reset by resizing or font loading.
   const unfold = assembling ? .82 + .18 * smooth(assemblyTime / 1.2) : 1;
-  const points = projectOrientation(orientation, settings.depth).map(p => p.map(v => v * unfold));
+  const points = projectOrientation(orientation, settings.depth, shape.vertices).map(p => p.map(v => v * unfold));
   const project = p => camera(p, cols, rows, cellW / cellH, settings.depth);
   const projected = points.map(project);
-  if (settings.detail > 0) for (const face of faces) {
+  if (settings.detail > 0) for (const face of shape.faces) {
     const p = face.map(i => points[i]);
-    const normal = unit(cross(sub(p[1], p[0]), sub(p[3], p[0])));
-    const center = p[0].map((_, axis) => p.reduce((sum, v) => sum + v[axis], 0) / 4);
+    const normal = unit(cross(sub(p[1], p[0]), sub(p[2], p[0])));
+    const center = p[0].map((_, axis) => p.reduce((sum, v) => sum + v[axis], 0) / p.length);
     const light = illumination(normal, center, true);
-    triangle([projected[face[0]], projected[face[1]], projected[face[2]]], [[0, 0], [1, 0], [1, 1]], light);
-    triangle([projected[face[0]], projected[face[2]], projected[face[3]]], [[0, 0], [1, 1], [0, 1]], light);
+    triangle(face.map(i => projected[i]), [[0, 0], [1, 0], [.5, 1]], light);
   }
   // Cylindrical struts: radial normals drive Lambert diffuse + Blinn specular.
   // Every sample has actual 3-D depth; crossings do not depend on draw order.
-  for (const [index, [a, b]] of edges.entries()) {
+  for (const [index, [a, b]] of shape.edges.entries()) {
     const progress = assembling ? smooth((assemblyTime - .3 - noise(index) * .28) / .85) : 1;
     if (progress === 0) continue;
     const start = points[a], delta = sub(points[b], start), axis = unit(delta);
@@ -159,7 +164,7 @@ function draw() {
       }
     }
   }
-  // Spherical joints finish the strut ends and mark all sixteen vertices.
+  // Spherical joints finish the strut ends and mark the polytope's vertices.
   for (const [index, vertex] of points.entries()) {
     const reveal = assembling ? smooth((assemblyTime - .04 - noise(index) * .22) / .28) : 1;
     if (reveal === 0) continue;
@@ -207,6 +212,10 @@ function draw() {
     ctx.fillStyle = palette[color];
     for (const [char, x, y] of batches[color]) ctx.fillText(char, x, y);
   }
+  canvas.dataset.seed = settings.seed;
+  canvas.dataset.vertices = String(shape.vertices.length);
+  canvas.dataset.edges = String(shape.edges.length);
+  canvas.dataset.faces = String(shape.faces.length);
   canvas.dataset.time = time.toFixed(3);
   canvas.dataset.angles = rotationPlanes.map(plane => (orientation[plane] * 180 / Math.PI).toFixed(1)).join(',');
   canvas.dataset.introTime = assemblyTime.toFixed(3);
@@ -231,9 +240,7 @@ function syncControls() {
   }
   followMouseToggle.checked = settings.followMouse;
   canvas.classList.toggle('is-following-mouse', settings.followMouse);
-  toggle.textContent = paused ? 'play' : 'pause';
-  toggle.setAttribute('aria-pressed', String(paused));
-  toggle.setAttribute('aria-label', paused ? 'Play rotation' : 'Pause rotation');
+  autoRotateToggle.checked = !paused;
 }
 function tick(now) {
   frame = 0;
@@ -319,12 +326,22 @@ for (const slider of sliders) {
   });
   slider.addEventListener('keyup', release);
 }
-toggle.addEventListener('click', () => { paused = !paused; draw(); start(); });
+autoRotateToggle.addEventListener('change', () => { paused = !autoRotateToggle.checked; draw(); start(); });
 document.querySelector('#rotation-reset').addEventListener('click', () => {
   Object.assign(orientation, initialOrientation());
-  Object.assign(settings, { speed: 1, depth: 5, detail: .5, followMouse: true });
+  Object.assign(settings, { speed: 1, depth: 5, detail: .5, followMouse: true, seed: initialSeed });
+  shape = generatePolytope(settings.seed); seedInput.value = settings.seed;
   lastMouse = null; lastMouseMovement = -Infinity;
   time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
+});
+document.querySelector('#shape-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const requested = seedInput.value.trim();
+  let seed = requested;
+  if (!seed || seed === settings.seed) do { seed = randomSeed(); } while (seed === settings.seed);
+  settings.seed = seed; shape = generatePolytope(seed); seedInput.value = seed;
+  assemblyTime = reduced.matches ? assemblyDuration : 0;
+  draw(); start();
 });
 canvas.addEventListener('pointerdown', event => {
   if (event.button !== 0 || !event.isPrimary) return;
