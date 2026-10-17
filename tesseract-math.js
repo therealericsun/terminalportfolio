@@ -20,15 +20,28 @@ export function rotate(point, a, b, angle) {
   return result;
 }
 export function projectVertices(time, yaw = 0, pitch = 0) {
+  return projectOrientation({ xy: 0, xz: time * .08 + .46 + yaw,
+    yz: .36 + Math.sin(time * .11) * .13 + pitch,
+    xw: time * .12, yw: time * .07, zw: time * .05 });
+}
+export const rotationPlanes = ['xy', 'xz', 'yz', 'xw', 'yw', 'zw'];
+export const initialOrientation = () => ({ xy: 0, xz: .46, yz: .36, xw: 0, yw: 0, zw: 0 });
+export const wrapAngle = angle => ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+export function advanceOrientation(orientation, dt, planes = rotationPlanes) {
+  const rates = { xy: .025, xz: .08, yz: .02, xw: .12, yw: .07, zw: .05 };
+  for (const plane of planes) orientation[plane] = wrapAngle(orientation[plane] + dt * rates[plane]);
+}
+export function projectOrientation(orientation, distance = 3.8) {
   return vertices.map(vertex => {
-    let p = rotate(vertex, 0, 3, time * .12);
-    p = rotate(p, 1, 3, time * .07);
-    p = rotate(p, 2, 3, time * .05);
+    let p = rotate(vertex, 0, 3, orientation.xw);
+    p = rotate(p, 1, 3, orientation.yw);
+    p = rotate(p, 2, 3, orientation.zw);
     // The 4-D eye stays outside the radius-2 hypersphere.
-    const scale = 3.8 / (3.8 - p[3]);
+    const scale = distance / (distance - p[3]);
     p = p.slice(0, 3).map(v => v * scale);
-    p = rotate(p, 0, 2, time * .08 + .46 + yaw);
-    return rotate(p, 1, 2, .36 + Math.sin(time * .11) * .13 + pitch);
+    p = rotate(p, 0, 1, orientation.xy);
+    p = rotate(p, 0, 2, orientation.xz);
+    return rotate(p, 1, 2, orientation.yz);
   });
 }
 const light = unit([-3, -4, 6]);
@@ -41,10 +54,19 @@ export function illumination(normal, position, twoSided = false) {
   const specular = Math.pow(Math.max(0, dot(n, half)), 28);
   return Math.min(1, .12 + .7 * diffuse + .35 * specular);
 }
-export function camera(point, width, height, cellAspect) {
+const screenRadiusFor = distance => {
+  const radius = 2 * distance / Math.sqrt(distance * distance - 4);
+  return 7.8 * radius / Math.sqrt(7.8 * 7.8 - radius * radius);
+};
+const projectionFits = new Map([[3.8, 1]]);
+export function camera(point, width, height, cellAspect, distance = 3.8) {
   const perspective = 7.8 / (7.8 - point[2]);
   // A fixed scale avoids breathing as the tesseract turns.
-  const scale = Math.min(width * cellAspect, height) / 5.2;
+  // Changing 4-D perspective changes the nested cubes' proportions. Compensate
+  // for their bounding sphere so every slider combination stays in frame.
+  if (!projectionFits.has(distance)) projectionFits.set(distance, screenRadiusFor(3.8) / screenRadiusFor(distance));
+  const fit = projectionFits.get(distance);
+  const scale = Math.min(width * cellAspect, height) / 5.8 * fit;
   return [width / 2 + point[0] * perspective * scale / cellAspect,
     height / 2 + point[1] * perspective * scale, point[2]];
 }

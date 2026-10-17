@@ -12,39 +12,14 @@
 </head>
 <body>
   <main class="page">
+    <div class="terminal-window portfolio-window">
+      <div class="window-titlebar" aria-hidden="true"><span class="window-prompt">&gt;_</span><span class="window-title">~/portfolio</span><span class="window-chrome">─ □ ×</span></div>
+      <div class="terminal-body">
     <header class="intro">
       <div class="intro-main">
-        <h1 class="ascii-name" aria-label="Eric Sun"><span class="ascii-word ascii-eric" aria-hidden="true"><span class="ascii-letter"> ______
-/\  ___\
-\ \  __\
- \ \_____\
-  \/_____/</span><span class="ascii-letter"> ______
-/\  == \
-\ \  __&lt;
- \ \_\ \_\
-  \/_/ /_/</span><span class="ascii-letter"> __
-/\ \
-\ \ \
- \ \_\
-  \/_/</span><span class="ascii-letter"> ______
-/\  ___\
-\ \ \____
- \ \_____\
-  \/_____/</span></span><span class="ascii-word ascii-sun" aria-hidden="true"><span class="ascii-letter">  ______
- /\  ___\
- \ \___  \
-  \/\_____\
-   \/_____/</span><span class="ascii-letter"> __  __
-/\ \/\ \
-\ \ \_\ \
- \ \_____\
-  \/_____/</span><span class="ascii-letter"> __   __
-/\ "-.\ \
-\ \ \-.  \
- \ \_\\"\_\
-  \/_/ \/_/</span></span></h1>
+        <h1 class="ascii-name" aria-label="Eric Sun"><canvas id="ascii-name-canvas" aria-hidden="true" hidden></canvas><span class="name-fallback" aria-hidden="true">ERIC SUN</span></h1>
         <p class="contact-line"><a href="mailto:ericsun@seas.upenn.edu">Email</a> <a href="https://github.com/therealericsun" target="_blank" rel="noopener noreferrer">GitHub</a> <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank" rel="noopener noreferrer">LinkedIn</a> <a href="./Eric_Sun_Resume.pdf" download>Resume</a></p>
-        <p class="tagline">Quantitative developer based in New York interested in machine learning and numerical simulations.</p>
+        <p class="tagline">Quantitative developer based in New York.</p>
       </div>
     </header>
 
@@ -71,7 +46,7 @@
               <h3>University of Pennsylvania</h3>
               <p class="meta">August 2023 - May 2027</p>
               <p>M.S. Physics, <em>Submatriculant (Joint B.A./M.S.)</em><br>B.A. Physics, <em>Conc. in Computational Techniques</em><br>B.S.E. Computer Science<br>Minor in Mathematics</p>
-              <p>GPA: 3.94 / 4.00<br>Vagelos Integrated Program in Energy Research (VIPER)</p>
+              <p>GPA: 3.94 / 4.00<br>Vagelos Integrated Program in Energy Research</p>
             </div>
           </section>
 
@@ -92,11 +67,40 @@
         </div>
       </div>
     </div>
+      </div>
+    </div>
     <footer>© 2026 Eric Sun</footer>
   </main>
   <figure id="tesseract-scene" aria-label="Animated ASCII tesseract">
-    <canvas id="tesseract" role="img" aria-label="A shaded ASCII tesseract rotating through four dimensions"></canvas>
+    <canvas id="tesseract" role="img" aria-label="A shaded ASCII tesseract rotating through four dimensions" aria-describedby="rotation-help"></canvas>
     <noscript><p class="scene-fallback">Enable JavaScript to see the rotating ASCII tesseract.</p></noscript>
   </figure>
+  <aside id="settings-drawer" class="settings-drawer terminal-window is-entering" aria-label="Tesseract settings">
+    <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-prompt" aria-hidden="true">&gt;_</span><span class="window-title">~/tesseract/settings</span><span class="drawer-hint" aria-hidden="true">open</span><span class="drawer-arrow" aria-hidden="true">↑</span></button>
+    <div id="drawer-content" class="controls-body drawer-content" inert aria-hidden="true">
+      <p id="rotation-help" class="sr-only">Follow mouse is enabled by default: move the mouse to rotate in XZ and YZ without holding a button. Disable it to use click-and-drag. Hold Shift to drag in XW and YW. The six angle sliders provide keyboard control of every rotation plane.</p>
+      <section class="rotation-section" aria-labelledby="rotation-heading">
+      <div class="panel-heading"><span id="rotation-heading">rotation</span><div class="panel-actions"><button id="rotation-toggle" type="button" aria-pressed="false">pause</button><span aria-hidden="true">/</span><button id="rotation-reset" type="button">reset</button></div></div>
+      <div class="angle-controls" role="group" aria-label="Rotation planes">
+        <label class="setting" for="angle-xy"><span class="setting-heading"><span>XY-angle</span><output id="value-xy" for="angle-xy">0°</output></span><input id="angle-xy" data-plane="xy" type="range" min="0" max="360" step="0.1" value="0" aria-label="XY-angle"></label>
+        <label class="setting" for="angle-xz"><span class="setting-heading"><span>XZ-angle</span><output id="value-xz" for="angle-xz">0°</output></span><input id="angle-xz" data-plane="xz" type="range" min="0" max="360" step="0.1" value="0" aria-label="XZ-angle"></label>
+        <label class="setting" for="angle-yz"><span class="setting-heading"><span>YZ-angle</span><output id="value-yz" for="angle-yz">0°</output></span><input id="angle-yz" data-plane="yz" type="range" min="0" max="360" step="0.1" value="0" aria-label="YZ-angle"></label>
+        <label class="setting" for="angle-xw"><span class="setting-heading"><span>XW-angle</span><output id="value-xw" for="angle-xw">0°</output></span><input id="angle-xw" data-plane="xw" type="range" min="0" max="360" step="0.1" value="0" aria-label="XW-angle"></label>
+        <label class="setting" for="angle-yw"><span class="setting-heading"><span>YW-angle</span><output id="value-yw" for="angle-yw">0°</output></span><input id="angle-yw" data-plane="yw" type="range" min="0" max="360" step="0.1" value="0" aria-label="YW-angle"></label>
+        <label class="setting" for="angle-zw"><span class="setting-heading"><span>ZW-angle</span><output id="value-zw" for="angle-zw">0°</output></span><input id="angle-zw" data-plane="zw" type="range" min="0" max="360" step="0.1" value="0" aria-label="ZW-angle"></label>
+      </div>
+      </section>
+      <section class="settings-section" aria-labelledby="settings-heading">
+        <div class="panel-heading"><span id="settings-heading">settings</span></div>
+        <div class="extra-settings">
+        <label class="setting" for="rotation-speed"><span class="setting-heading"><span>speed</span><output id="value-speed" for="rotation-speed">1.0×</output></span><input id="rotation-speed" type="range" min="0" max="3" step="0.1" value="1" aria-label="Rotation speed"></label>
+        <label class="setting" for="projection-depth"><span class="setting-heading"><span>4D perspective</span><output id="value-depth" for="projection-depth">5.0</output></span><input id="projection-depth" type="range" min="3" max="7" step="0.1" value="5.0" aria-label="4D perspective distance"></label>
+        <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">50%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="50" aria-label="Face texture amount"></label>
+        <label class="mouse-follow" for="mouse-follow"><input id="mouse-follow" type="checkbox" checked><span>follow mouse</span></label>
+        </div>
+      </section>
+
+    </div>
+  </aside>
 </body>
 </html>

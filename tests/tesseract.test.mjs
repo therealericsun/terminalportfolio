@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vertices, edges, faces, rotate, projectVertices, camera, illumination } from '../tesseract-math.js';
+import { vertices, edges, faces, rotate, projectVertices, camera, illumination, rotationPlanes, initialOrientation, advanceOrientation, projectOrientation } from '../tesseract-math.js';
 
 test('tesseract topology has 16 vertices, 32 edges and 24 square faces', () => {
   assert.equal(new Set(vertices.map(v => v.join(','))).size, 16);
@@ -47,4 +47,41 @@ test('a fixed directional light distinguishes lit and unlit normals', () => {
     assert.ok(light >= .12 && light <= 1);
   }
   assert.equal(illumination([0,0,1], [0,0,0], true), illumination([0,0,-1], [0,0,0], true));
+});
+
+test('each of six independent rotation planes affects the projected geometry', () => {
+  const base = initialOrientation();
+  const before = projectOrientation(base);
+  for (const plane of rotationPlanes) {
+    assert.notDeepEqual(projectOrientation({ ...base, [plane]: base[plane] + .4 }), before, plane);
+  }
+});
+
+test('animation advances the same six angles used by manual controls and wraps continuously', () => {
+  const orientation = Object.fromEntries(rotationPlanes.map(plane => [plane, Math.PI * 2 - .001]));
+  advanceOrientation(orientation, 1);
+  for (const angle of Object.values(orientation)) assert.ok(angle > 0 && angle < .13);
+  const once = initialOrientation(), twice = initialOrientation();
+  advanceOrientation(once, 2);
+  advanceOrientation(twice, 1); advanceOrientation(twice, 1);
+  for (const plane of rotationPlanes) assert.ok(Math.abs(once[plane] - twice[plane]) < 1e-12);
+});
+
+test('arbitrary slider orientations remain framed throughout the perspective range', () => {
+  for (let i = 0; i < 300; i++) {
+    const orientation = Object.fromEntries(rotationPlanes.map((plane, axis) => [plane, i * (axis + 1) * 1.618]));
+    for (const distance of [3, 3.8, 7]) for (const p of projectOrientation(orientation, distance)) {
+      assert.ok(p.every(Number.isFinite));
+      const [x, y] = camera(p, 160, 80, .5, distance);
+      assert.ok(x > 2 && x < 158 && y > 1 && y < 79, `clipping: ${i}, ${distance}`);
+    }
+  }
+});
+
+
+test('four-dimensional spin can continue without changing pointer-controlled spatial angles', () => {
+  const orientation = initialOrientation(), before = { ...orientation };
+  advanceOrientation(orientation, 1, ['xw', 'yw', 'zw']);
+  for (const plane of ['xy', 'xz', 'yz']) assert.equal(orientation[plane], before[plane]);
+  for (const plane of ['xw', 'yw', 'zw']) assert.ok(orientation[plane] > before[plane]);
 });

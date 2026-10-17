@@ -1,6 +1,6 @@
 # Eric Sun — ASCII tesseract portfolio
 
-A single-page portfolio with an animated, shaded ASCII tesseract. The portfolio and simulation share a near-black, ember orange, gold and cream palette. The text is visible immediately, even without JavaScript. No additional runtime dependencies.
+A single-page portfolio with an animated, shaded ASCII tesseract. The portfolio and simulation share a near-black, ember orange, gold and cream palette. The HTML text remains readable and available without JavaScript. With motion enabled, the portfolio terminal expands upward and downward from a central horizontal line, carrying its title bar and bottom border outward without scrambling its text. A beveled ASCII name uses the simulation’s fine character scale to unify the two sides of the page. No additional runtime dependencies.
 
 ## Development
 
@@ -16,9 +16,9 @@ The geometry has 16 vertices, 32 cylindrical edges and 24 translucent square fac
 
 On first appearance, a 2.6-second assembly sequence sparks the vertices, traces the edges from both ends, and sweeps shimmering characters across the faces. Rotation eases into its normal speed. The sequence waits until the scene enters the viewport, pauses offscreen, survives resizing without replaying, and is skipped for reduced motion or direct dragging.
 
-The scene is the only visual element beside the portfolio; there are no captions or buttons. Drag it to orbit. On desktop the portfolio content is vertically centered beside the simulation, with the copyright kept at the bottom. On narrow screens the scene follows the portfolio. The default rotation runs at twice the original speed. The animation draws at 30 fps, caps backing-store density at 2×, suspends when hidden or offscreen, and stays static for reduced-motion visitors. Mobile vertical swipes remain available for scrolling.
+Six compact sliders expose XY, XZ, YZ, XW, YW and ZW rotation angles. They share the renderer’s orientation state, so animation, direct dragging and slider changes remain synchronized. Drag to adjust XZ/YZ, or Shift-drag to adjust XW/YW. The default-enabled follow mouse checkbox lets mouse movement anywhere on the page turn the tesseract without pressing a button; settings controls remain steady while editing. Extra-dimensional rotation continues during mouse control and held drags. Disabling follow mouse restores click-and-drag. Animation yields while a slider is being adjusted, then resumes from that orientation. Every slider also supports native keyboard input. A single bottom drawer contains the six rotation angles and the remaining settings, with a visual divider between the two groups. On page load, its handle rises from below the viewport with a small settling bounce; reduced motion skips this entrance. The entire panel opens and closes together; Escape closes it and returns focus to the drawer handle. Hidden controls are inert. It adds speed (including zero), 4-D perspective and face texture; zero texture produces a wireframe. Face texture defaults to 50% and 4-D perspective to 5.0. Pause/play and reset sit above the angles; reset restores defaults and replays the assembly sequence even while rotation is paused, unless reduced motion is enabled. Perspective uses a bounding-sphere correction to keep arbitrary orientations in frame. On desktop the portfolio content is vertically centered beside the simulation, with the copyright kept at the bottom. On narrow screens the scene follows the portfolio. The default rotation runs at twice the original speed. The animation draws at 30 fps, caps backing-store density at 2×, suspends when hidden or offscreen, and stays static for reduced-motion visitors. Mobile vertical swipes remain available for scrolling.
 
-`tesseract-math.js` owns the geometry/projection and `tesseract.js` owns rendering and interaction. `style.css` contains the variant layout. The renderer shares the body’s font family and weight, with smaller 8–11px characters and compact line spacing for a denser animation.
+`tesseract-math.js` owns the geometry, six-angle orientation state and projection; `tesseract.js` owns rendering and interaction. `ascii-name.js` renders the shaded name. `style.css` contains the variant layout. The name and simulation share the body’s font family and weight, and use the same responsive 8–11px glyph size and compact line spacing. The compact 12px portfolio and controls sit in matching square terminal-style frames; sliders are rectangular fill meters with native pointer and keyboard interaction.
 
 ## Validation
 
@@ -27,7 +27,7 @@ npm run check
 npm test
 ```
 
-Tests cover topology, rotation invariance, projection bounds and directional lighting, alongside the retained beach simulation tests.
+Tests cover topology, rotation invariance, all six rotation planes, continuous angle wrapping, projection bounds at arbitrary orientations and perspective settings, and directional lighting, alongside the retained beach simulation tests.
 
 ## Deployment
 

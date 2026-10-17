@@ -1,10 +1,12 @@
-import { edges, faces, projectVertices, sub, cross, unit, illumination, camera } from './tesseract-math.js';
+import { edges, faces, projectOrientation, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js';
 import { Entrance } from './intro.js';
+import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
 const ctx = canvas.getContext('2d', { alpha: false });
 const scene = document.querySelector('#tesseract-scene');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const setNameFontSize = initAsciiName();
 const entrance = new Entrance(document.querySelector('.page'), reduced.matches);
 const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
 const smooth = value => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t); };
@@ -25,11 +27,25 @@ const palette = Array.from({ length: 40 }, (_, i) => {
   return `rgb(${stops[low].map((value, channel) => Math.round(value + (stops[low + 1][channel] - value) * fraction)).join(',')})`;
 });
 const rotationSpeed = 2;
+const orientation = initialOrientation();
+const settings = { speed: 1, depth: 5, detail: .5, followMouse: true };
+const followMouseToggle = document.querySelector('#mouse-follow');
+const extraPlanes = ['xw', 'yw', 'zw'];
+const drawer = document.querySelector('#settings-drawer');
+const finishDrawerEntrance = () => drawer.classList.remove('is-entering');
+drawer.addEventListener('animationend', finishDrawerEntrance, { once: true });
+drawer.addEventListener('focusin', finishDrawerEntrance, { once: true });
+if (reduced.matches) finishDrawerEntrance();
+const drawerToggle = document.querySelector('#drawer-toggle');
+const drawerContent = document.querySelector('#drawer-content');
+const sliders = [...drawer.querySelectorAll('input[type="range"]')];
+const toggle = document.querySelector('#rotation-toggle');
 let width = 0, height = 0, cols = 0, rows = 0, cellW = 0, cellH = 0;
 let edgeDepth, edgeLight, edgeGlyph, surfaceDepth, surfaceLight, surfaceHatch;
-let time = 0, yaw = 0, pitch = 0, frame = 0, previous = 0, accumulator = 0;
+let time = 0, frame = 0, previous = 0, accumulator = 0, activeControl = null;
 let assemblyTime = reduced.matches ? assemblyDuration : 0;
 let paused = reduced.matches, dragging = null, visible = false;
+let lastMouse = null, lastMouseMovement = -Infinity;
 
 function resize() {
   const bounds = canvas.getBoundingClientRect();
@@ -40,6 +56,8 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const typography = getComputedStyle(document.body);
   const fontSize = clamp(width / 92, 8, 11);
+  canvas.dataset.fontSize = fontSize.toFixed(2);
+  setNameFontSize(fontSize);
   ctx.font = `${typography.fontWeight} ${fontSize}px ${typography.fontFamily}`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   cellW = ctx.measureText('M').width;
@@ -100,10 +118,10 @@ function draw() {
   // This clock advances only while the scene is visible, independently of the
   // faster simulation clock, and is never reset by resizing or font loading.
   const unfold = assembling ? .82 + .18 * smooth(assemblyTime / 1.2) : 1;
-  const points = projectVertices(time, yaw, pitch).map(p => p.map(v => v * unfold));
-  const project = p => camera(p, cols, rows, cellW / cellH);
+  const points = projectOrientation(orientation, settings.depth).map(p => p.map(v => v * unfold));
+  const project = p => camera(p, cols, rows, cellW / cellH, settings.depth);
   const projected = points.map(project);
-  for (const face of faces) {
+  if (settings.detail > 0) for (const face of faces) {
     const p = face.map(i => points[i]);
     const normal = unit(cross(sub(p[1], p[0]), sub(p[3], p[0])));
     const center = p[0].map((_, axis) => p.reduce((sum, v) => sum + v[axis], 0) / 4);
@@ -158,16 +176,17 @@ function draw() {
     const x = i % cols, y = Math.floor(i / cols);
     // A little more grain than the dot-only version, with small gaps between
     // the surface characters and continuous, lightly accented hatching.
-    if (!hasEdge && !surfaceHatch[i] && x % 2 === 0 && y % 2 === 0) continue;
+    if (!hasEdge && (settings.detail === 0 ||
+      (!surfaceHatch[i] && (x % 2 * 2 + y % 2) / 4 >= .25 + .75 * settings.detail))) continue;
     const sweepPosition = x / cols * .55 + (1 - y / rows) * .45;
     const sweep = (assemblyTime - .95) / 1.05;
     const faceReveal = assembling ? smooth((sweep - sweepPosition) * 5) : 1;
     // Fixed spatial thresholds reveal characters without random flicker.
     if (!hasEdge && (faceReveal === 0 || faceReveal < noise(i))) continue;
-    let light = hasEdge ? edgeLight[i] : surfaceLight[i];
+    let light = hasEdge ? edgeLight[i] : surfaceLight[i] * (.55 + .45 * settings.detail / .65);
     if (hasEdge) {
       light *= clamp(.78 + edgeDepth[i] * .085, .46, 1.08);
-      if (edgeDepth[i] < surfaceDepth[i] - .09) light *= 1 - .18 * faceReveal;
+      if (edgeDepth[i] < surfaceDepth[i] - .09) light *= 1 - .18 * faceReveal * settings.detail / .65;
     }
     let char = hasEdge
       ? light < .32 && edgeGlyph[i] ? ['', '─', '│', '╲', '╱'][edgeGlyph[i]] : ramp[clamp(Math.round(light * (ramp.length - 1)), 1, ramp.length - 1)]
@@ -186,9 +205,32 @@ function draw() {
     for (const [char, x, y] of batches[color]) ctx.fillText(char, x, y);
   }
   canvas.dataset.time = time.toFixed(3);
+  canvas.dataset.angles = rotationPlanes.map(plane => (orientation[plane] * 180 / Math.PI).toFixed(1)).join(',');
   canvas.dataset.introTime = assemblyTime.toFixed(3);
   canvas.dataset.intro = !assembling ? 'complete' : assemblyTime < .3 ? 'vertices' : assemblyTime < 1.05 ? 'edges' : 'surfaces';
-  canvas.dataset.motion = paused ? 'paused' : document.hidden || !visible ? 'suspended' : 'running';
+  canvas.dataset.motion = paused || settings.speed === 0 ? 'paused' : document.hidden || !visible ? 'suspended' : 'running';
+  syncControls();
+}
+function syncControls() {
+  for (const slider of sliders) {
+    const plane = slider.dataset.plane;
+    const value = plane ? orientation[plane] * 180 / Math.PI
+      : slider.id === 'rotation-speed' ? settings.speed
+      : slider.id === 'projection-depth' ? settings.depth : settings.detail * 100;
+    slider.value = value.toFixed(1);
+    slider.style.setProperty('--fill', `${(value - Number(slider.min)) / (Number(slider.max) - Number(slider.min)) * 100}%`);
+    const output = slider.parentElement.querySelector('output');
+    const text = plane ? `${Math.round(value)}°`
+      : slider.id === 'rotation-speed' ? `${value.toFixed(1)}×`
+      : slider.id === 'projection-depth' ? value.toFixed(1) : `${Math.round(value)}%`;
+    output.value = text;
+    slider.setAttribute('aria-valuetext', text);
+  }
+  followMouseToggle.checked = settings.followMouse;
+  canvas.classList.toggle('is-following-mouse', settings.followMouse);
+  toggle.textContent = paused ? 'play' : 'pause';
+  toggle.setAttribute('aria-pressed', String(paused));
+  toggle.setAttribute('aria-label', paused ? 'Play rotation' : 'Pause rotation');
 }
 function tick(now) {
   frame = 0;
@@ -196,12 +238,20 @@ function tick(now) {
   const dt = previous ? Math.min((now - previous) / 1000, .1) : 0;
   previous = now; accumulator += dt;
   if (!entrance.finished) entrance.update(dt);
-  if (visible && !paused && !dragging) {
-    assemblyTime = Math.min(assemblyDuration, assemblyTime + dt);
-    time += dt * rotationSpeed * smooth((assemblyTime - .5) / 1.3);
+  const canAnimate = !activeControl && (!dragging || settings.followMouse);
+  if (visible && canAnimate) {
+    if (!reduced.matches) assemblyTime = Math.min(assemblyDuration, assemblyTime + dt);
+    if (!paused) {
+      const delta = dt * rotationSpeed * settings.speed * smooth((assemblyTime - .5) / 1.3);
+      time += delta;
+      // Pointer control owns the spatial angles while the fourth dimension keeps turning.
+      const pointerTurning = settings.followMouse && (dragging || now - lastMouseMovement < 200);
+      advanceOrientation(orientation, delta, pointerTurning ? extraPlanes : rotationPlanes);
+    }
   }
-  if (visible && accumulator >= 1 / 30) { draw(); accumulator %= 1 / 30; }
-  if ((!paused && visible) || !entrance.finished) frame = requestAnimationFrame(tick);
+  const needsFinalFrame = assemblyTime >= assemblyDuration && canvas.dataset.intro !== 'complete';
+  if (visible && (accumulator >= 1 / 30 || needsFinalFrame)) { draw(); accumulator %= 1 / 30; }
+  if ((visible && canAnimate && ((!paused && settings.speed > 0) || assemblyTime < assemblyDuration)) || !entrance.finished) frame = requestAnimationFrame(tick);
   else previous = 0;
 }
 function start() {
@@ -209,24 +259,110 @@ function start() {
 }
 reduced.addEventListener('change', () => {
   paused = reduced.matches; assemblyTime = assemblyDuration;
-  entrance.finish(); draw(); start();
+  entrance.finish(); finishDrawerEntrance(); draw(); start();
 });
-document.addEventListener('visibilitychange', () => { previous = 0; start(); });
+document.addEventListener('visibilitychange', () => { previous = 0; lastMouse = null; start(); });
+function setDrawerOpen(open) {
+  finishDrawerEntrance();
+  if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
+  drawer.classList.toggle('is-open', open);
+  drawerToggle.setAttribute('aria-expanded', String(open));
+  drawerToggle.querySelector('.drawer-hint').textContent = open ? 'close' : 'open';
+  drawerToggle.querySelector('.drawer-arrow').textContent = open ? '↓' : '↑';
+  drawerContent.inert = !open;
+  drawerContent.setAttribute('aria-hidden', String(!open));
+  document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
+  document.body.classList.toggle('settings-open', open);
+  if (open && matchMedia('(max-width: 900px)').matches) {
+    const area = innerHeight - drawer.getBoundingClientRect().height;
+    const bounds = scene.getBoundingClientRect();
+    window.scrollTo({
+      top: Math.max(0, scrollY + bounds.top - Math.max(12, (area - bounds.height) / 2)),
+      behavior: reduced.matches ? 'auto' : 'smooth',
+    });
+  }
+}
+new ResizeObserver(() => {
+  if (drawer.classList.contains('is-open')) document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
+}).observe(drawer);
+drawerToggle.addEventListener('click', () => setDrawerOpen(!drawer.classList.contains('is-open')));
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && drawer.classList.contains('is-open')) setDrawerOpen(false);
+});
+window.addEventListener('blur', () => {
+  activeControl = null; dragging = null; previous = 0; lastMouse = null;
+  canvas.classList.remove('is-dragging'); start();
+});
+for (const slider of sliders) {
+  slider.addEventListener('input', () => {
+    assemblyTime = assemblyDuration;
+    const value = Number(slider.value);
+    if (slider.dataset.plane) orientation[slider.dataset.plane] = value * Math.PI / 180;
+    else if (slider.id === 'rotation-speed') settings.speed = value;
+    else if (slider.id === 'projection-depth') settings.depth = value;
+    else settings.detail = value / 100;
+    draw(); start();
+  });
+  slider.addEventListener('pointerdown', event => {
+    activeControl = slider; assemblyTime = assemblyDuration;
+    slider.setPointerCapture(event.pointerId);
+  });
+  const release = () => { if (activeControl === slider) activeControl = null; previous = 0; start(); };
+  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture', 'blur']) slider.addEventListener(event, release);
+  slider.addEventListener('keydown', event => {
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key)) {
+      activeControl = slider; assemblyTime = assemblyDuration;
+    }
+  });
+  slider.addEventListener('keyup', release);
+}
+toggle.addEventListener('click', () => { paused = !paused; draw(); start(); });
+document.querySelector('#rotation-reset').addEventListener('click', () => {
+  Object.assign(orientation, initialOrientation());
+  Object.assign(settings, { speed: 1, depth: 5, detail: .5, followMouse: true });
+  lastMouse = null; lastMouseMovement = -Infinity;
+  time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
+});
 canvas.addEventListener('pointerdown', event => {
   if (event.button !== 0 || !event.isPrimary) return;
   assemblyTime = assemblyDuration;
   dragging = { id: event.pointerId, x: event.clientX, y: event.clientY };
   canvas.setPointerCapture(event.pointerId); canvas.classList.add('is-dragging');
 });
+function turnFromPointer(dx, dy, shift) {
+  const sensitivity = settings.followMouse ? .003 : .008;
+  const horizontal = shift ? 'xw' : 'xz';
+  const vertical = shift ? 'yw' : 'yz';
+  orientation[horizontal] = wrapAngle(orientation[horizontal] + dx * sensitivity);
+  orientation[vertical] = wrapAngle(orientation[vertical] + dy * sensitivity);
+  lastMouseMovement = performance.now();
+}
 canvas.addEventListener('pointermove', event => {
   if (!dragging || event.pointerId !== dragging.id) return;
-  yaw += (event.clientX - dragging.x) * .008; pitch += (event.clientY - dragging.y) * .008;
+  turnFromPointer(event.clientX - dragging.x, event.clientY - dragging.y, event.shiftKey);
   dragging.x = event.clientX; dragging.y = event.clientY; draw();
 });
+followMouseToggle.addEventListener('change', () => {
+  settings.followMouse = followMouseToggle.checked;
+  lastMouse = null; lastMouseMovement = -Infinity;
+  draw(); start();
+});
+window.addEventListener('pointermove', event => {
+  if (event.pointerType !== 'mouse' || !event.isPrimary) return;
+  const previousMouse = lastMouse;
+  lastMouse = { x: event.clientX, y: event.clientY };
+  // Keep controls steady while editing, and avoid counting held drags twice.
+  if (!settings.followMouse || !previousMouse || dragging || activeControl ||
+      event.buttons || drawer.contains(event.target) || !visible || document.hidden) return;
+  turnFromPointer(event.clientX - previousMouse.x, event.clientY - previousMouse.y, event.shiftKey);
+  if (!frame) draw();
+  start();
+});
+window.addEventListener('pointerout', event => { if (!event.relatedTarget) lastMouse = null; });
 function endDrag() { dragging = null; canvas.classList.remove('is-dragging'); start(); }
 canvas.addEventListener('lostpointercapture', endDrag);
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
 new ResizeObserver(resize).observe(canvas);
 new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; previous = 0; start(); }).observe(scene);
-resize(); document.fonts.ready.then(resize); start();
+syncControls(); resize(); document.fonts.ready.then(resize); start();

@@ -28,7 +28,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p _site
-          cp index.html style.css tesseract.js tesseract-math.js intro.js favicon.svg Eric_Sun_Resume.pdf CNAME _site/
+          cp index.html style.css ascii-name.js tesseract.js tesseract-math.js intro.js favicon.svg Eric_Sun_Resume.pdf CNAME _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
