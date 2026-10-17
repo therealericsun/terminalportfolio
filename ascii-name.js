@@ -1,3 +1,5 @@
+import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
+
 // Render the name with the same small monospace glyphs as the simulation.
 // A raster text mask supplies the silhouette; its bevel and offset extrusion
 // supply the character density, retaining an accessible HTML heading.
@@ -11,6 +13,7 @@ export function initAsciiName() {
   heading.classList.add('name-ready');
   const mask = document.createElement('canvas');
   const ink = mask.getContext('2d', { willReadFrequently: true });
+  const palette = createAsciiPalette();
   const glyphs = ' .,:;=+x%#@';
   let glyphSize = 8;
   function draw() {
@@ -22,7 +25,6 @@ export function initAsciiName() {
     ctx.clearRect(0, 0, width, height);
     const typography = getComputedStyle(document.body);
     const theme = getComputedStyle(document.documentElement);
-    const accent = theme.getPropertyValue('--accent').trim();
     const ember = theme.getPropertyValue('--scene-ember').trim();
     mask.width = Math.ceil(width); mask.height = Math.ceil(height);
     const size = height * 1.12;
@@ -61,7 +63,11 @@ export function initAsciiName() {
       const grain = (Math.floor(x / cellW) * 17 + Math.floor(y / cellH) * 29) % 11 / 11;
       const light = Math.max(.2, Math.min(1, .66 + bevel + grain * .16 - y / height * .12));
       const char = glyphs[Math.max(1, Math.round(light * coverage * (glyphs.length - 1)))];
-      ctx.fillStyle = accent; ctx.fillText(char, x, y);
+      // The same ramp and light direction as the rendered struts: orange fronts,
+      // gold/cream bevels facing upper-left, and ember on the offset extrusion.
+      const tone = .39 + bevel * 1.4 + grain * .025 - y / height * .035;
+      ctx.fillStyle = palette[asciiColorIndex(tone, palette.length)];
+      ctx.fillText(char, x, y);
     }
   }
   new ResizeObserver(draw).observe(canvas);

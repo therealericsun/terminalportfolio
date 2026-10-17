@@ -1,5 +1,6 @@
 import { projectOrientation, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js';
 import { generatePolytope } from './polytope.js';
+import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
 import { Entrance } from './intro.js';
 import { initAsciiName } from './ascii-name.js';
 
@@ -20,20 +21,13 @@ const faceRamp = ' .,:;+=*';
 // reference's ember → orange → gold → cream ramp using geometric brightness.
 const theme = getComputedStyle(document.documentElement);
 const background = theme.getPropertyValue('--bg').trim();
-const stops = ['--scene-shadow', '--scene-ember', '--accent', '--gold', '--cream']
-  .map(name => theme.getPropertyValue(name).trim().slice(1).match(/../g).map(hex => parseInt(hex, 16)));
-const palette = Array.from({ length: 40 }, (_, i) => {
-  const position = i / 39 * (stops.length - 1);
-  const low = Math.min(stops.length - 2, Math.floor(position));
-  const fraction = position - low;
-  return `rgb(${stops[low].map((value, channel) => Math.round(value + (stops[low + 1][channel] - value) * fraction)).join(',')})`;
-});
+const palette = createAsciiPalette(theme);
 // Rebase the slider: 1× is the previous 2× rotation rate.
 const rotationSpeed = 4;
 const orientation = initialOrientation();
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
 const initialSeed = randomSeed();
-const settings = { speed: 1, depth: 5, detail: .5, followMouse: true, seed: initialSeed };
+const settings = { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed };
 let shape = generatePolytope(settings.seed);
 const seedInput = document.querySelector('#shape-seed');
 seedInput.value = settings.seed;
@@ -157,7 +151,7 @@ function draw() {
         const distanceFromEnd = Math.min(fraction, 1 - fraction);
         // Two bright trace heads grow from the endpoints and meet midway.
         if (distanceFromEnd > progress * .5) continue;
-        const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * .043);
+        const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * .043 * settings.edgeWidth);
         const trace = assembling && progress < .99 && Math.abs(distanceFromEnd - progress * .5) < .022;
         const light = Math.max(illumination(normal, p), trace ? .98 : 0);
         putEdge(project(p), light, light < .45 ? direction : 0);
@@ -171,7 +165,7 @@ function draw() {
     for (let lat = 1; lat < 8; lat++) for (let lon = 0; lon < 14; lon++) {
       const phi = lat * Math.PI / 8, theta = lon * Math.PI / 7;
       const normal = [Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta)];
-      const p = vertex.map((v, i) => v + normal[i] * .061);
+      const p = vertex.map((v, i) => v + normal[i] * .061 * settings.edgeWidth);
       const spark = assembling ? (1 - smooth((assemblyTime - .4) / .65)) * reveal : 0;
       putEdge(project(p), Math.max(illumination(normal, p) * reveal, spark));
     }
@@ -205,7 +199,7 @@ function draw() {
       const symbols = '.·:+';
       char = symbols[(i * 11 + Math.floor(assemblyTime * 18)) % symbols.length];
     }
-    const color = clamp(Math.floor(light * 1.4 * 39), 0, 39);
+    const color = asciiColorIndex(light, palette.length);
     batches[color].push([char, (i % cols + .5) * cellW, (Math.floor(i / cols) + .5) * cellH]);
   }
   for (let color = 0; color < batches.length; color++) {
@@ -228,12 +222,13 @@ function syncControls() {
     const plane = slider.dataset.plane;
     const value = plane ? orientation[plane] * 180 / Math.PI
       : slider.id === 'rotation-speed' ? settings.speed
-      : slider.id === 'projection-depth' ? settings.depth : settings.detail * 100;
+      : slider.id === 'projection-depth' ? settings.depth
+      : slider.id === 'edge-width' ? settings.edgeWidth : settings.detail * 100;
     slider.value = value.toFixed(1);
     slider.style.setProperty('--fill', `${(value - Number(slider.min)) / (Number(slider.max) - Number(slider.min)) * 100}%`);
     const output = slider.parentElement.querySelector('output');
     const text = plane ? `${Math.round(value)}°`
-      : slider.id === 'rotation-speed' ? `${value.toFixed(1)}×`
+      : slider.id === 'rotation-speed' || slider.id === 'edge-width' ? `${value.toFixed(1)}×`
       : slider.id === 'projection-depth' ? value.toFixed(1) : `${Math.round(value)}%`;
     output.value = text;
     slider.setAttribute('aria-valuetext', text);
@@ -310,6 +305,7 @@ for (const slider of sliders) {
     if (slider.dataset.plane) orientation[slider.dataset.plane] = value * Math.PI / 180;
     else if (slider.id === 'rotation-speed') settings.speed = value;
     else if (slider.id === 'projection-depth') settings.depth = value;
+    else if (slider.id === 'edge-width') settings.edgeWidth = value;
     else settings.detail = value / 100;
     draw(); start();
   });
@@ -329,7 +325,7 @@ for (const slider of sliders) {
 autoRotateToggle.addEventListener('change', () => { paused = !autoRotateToggle.checked; draw(); start(); });
 document.querySelector('#rotation-reset').addEventListener('click', () => {
   Object.assign(orientation, initialOrientation());
-  Object.assign(settings, { speed: 1, depth: 5, detail: .5, followMouse: true, seed: initialSeed });
+  Object.assign(settings, { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed });
   shape = generatePolytope(settings.seed); seedInput.value = settings.seed;
   lastMouse = null; lastMouseMovement = -Infinity;
   time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
