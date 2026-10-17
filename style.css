@@ -100,7 +100,7 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 .setting input::-moz-range-thumb { width: 1px; height: 10px; border: 0; border-radius: 0; background: transparent; }
 .setting input:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; border-radius: 0; }
 .rotation-speed { margin-top:6px; }
-.rotation-options { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; }
+.rotation-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 16px; margin-top:8px; }
 .seed-control { margin-top:5px; }
 .seed-control>label { display:block; margin-bottom:6px; }
 .seed-row { display:flex; align-items:stretch; gap:8px; }
@@ -164,7 +164,8 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
   .window-titlebar { padding:0 11px; }
   .drawer-content { grid-template-columns:minmax(0,1fr); gap:16px; padding:16px; }
   .settings-section { border-left:0; border-top:1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); padding-left:0; padding-top:16px; }
-  .angle-controls { column-gap:18px; row-gap:6px; }
+  .angle-controls,.rotation-options { column-gap:18px; }
+  .angle-controls { row-gap:6px; }
   .extra-settings { gap:6px; }
   .setting input { margin-top:6px; margin-bottom:9px; }
   .checkbox-setting { min-height:24px; }
