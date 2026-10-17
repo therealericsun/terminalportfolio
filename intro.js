@@ -17,7 +17,7 @@ export class Entrance {
   }
   update(dt) {
     this.elapsed += dt;
-    if (!this.finished && this.elapsed >= 1) this.finish();
+    if (!this.finished && this.elapsed >= 1.6) this.finish();
   }
   finish() {
     this.finished = true;

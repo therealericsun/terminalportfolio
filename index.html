@@ -7,8 +7,13 @@
   <meta name="description" content="Eric Sun — Physics and Computer Science at the University of Pennsylvania.">
   <title>Eric Sun</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <script>
+    // Set the first-paint state before the stylesheet or deferred module loads.
+    document.documentElement.classList.add('is-loading');
+    window.addEventListener('error', () => document.documentElement.classList.remove('is-loading'));
+  </script>
   <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./tesseract.js"></script>
+  <script type="module" src="./tesseract.js" onerror="document.documentElement.classList.remove('is-loading')"></script>
 </head>
 <body>
   <main class="page">
@@ -75,7 +80,7 @@
     <canvas id="tesseract" role="img" aria-label="A shaded ASCII tesseract rotating through four dimensions" aria-describedby="rotation-help"></canvas>
     <noscript><p class="scene-fallback">Enable JavaScript to see the rotating ASCII tesseract.</p></noscript>
   </figure>
-  <aside id="settings-drawer" class="settings-drawer terminal-window is-entering" aria-label="Tesseract settings">
+  <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="Tesseract settings">
     <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-prompt" aria-hidden="true">&gt;_</span><span class="window-title">~/tesseract/settings</span><span class="drawer-hint" aria-hidden="true">open</span><span class="drawer-arrow" aria-hidden="true">↑</span></button>
     <div id="drawer-content" class="controls-body drawer-content" inert aria-hidden="true">
       <p id="rotation-help" class="sr-only">Follow mouse is enabled by default: move the mouse to rotate in XZ and YZ without holding a button. Disable it to use click-and-drag. Hold Shift to drag in XW and YW. The six angle sliders provide keyboard control of every rotation plane.</p>

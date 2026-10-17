@@ -12,6 +12,7 @@ const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
 const smooth = value => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t); };
 const noise = index => ((index * 73 + 19) % 127) / 127;
 const assemblyDuration = 2.6;
+const assemblyTempo = 1 / 1.6;
 const ramp = ' .,:;!i><+r?/tfx%S&#@';
 const faceRamp = ' .,:;+=*';
 // The text and simulation share the same CSS color tokens. Interpolate the
@@ -37,6 +38,7 @@ const finishDrawerEntrance = () => drawer.classList.remove('is-entering');
 drawer.addEventListener('animationend', finishDrawerEntrance, { once: true });
 drawer.addEventListener('focusin', finishDrawerEntrance, { once: true });
 if (reduced.matches) finishDrawerEntrance();
+else drawer.classList.add('is-entering');
 const drawerToggle = document.querySelector('#drawer-toggle');
 const drawerContent = document.querySelector('#drawer-content');
 const sliders = [...drawer.querySelectorAll('input[type="range"]')];
@@ -241,7 +243,7 @@ function tick(now) {
   if (!entrance.finished) entrance.update(dt);
   const canAnimate = !activeControl && (!dragging || settings.followMouse);
   if (visible && canAnimate) {
-    if (!reduced.matches) assemblyTime = Math.min(assemblyDuration, assemblyTime + dt);
+    if (!reduced.matches) assemblyTime = Math.min(assemblyDuration, assemblyTime + dt * assemblyTempo);
     if (!paused) {
       const delta = dt * rotationSpeed * settings.speed * smooth((assemblyTime - .5) / 1.3);
       time += delta;
@@ -367,3 +369,5 @@ canvas.addEventListener('pointercancel', endDrag);
 new ResizeObserver(resize).observe(canvas);
 new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; previous = 0; start(); }).observe(scene);
 syncControls(); resize(); document.fonts.ready.then(resize); start();
+// Name geometry, canvas sizes and entrance states are ready for the first paint.
+document.documentElement.classList.remove('is-loading');
