@@ -1,1 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#080609"/><text x="9" y="43" font-family="monospace" font-size="29" fill="#ffd16e">es</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Eric Sun">
+  <rect width="64" height="64" fill="#080609"/>
+  <rect x=".5" y=".5" width="63" height="63" fill="none" stroke="#75512d"/>
+  <text x="32" y="43" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace" font-size="32" font-weight="400" letter-spacing="-2"><tspan fill="#f8922e">e</tspan><tspan fill="#ffd16e">s</tspan></text>
+</svg>
