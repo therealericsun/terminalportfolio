@@ -67,19 +67,19 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 .scene-fallback { position: absolute; top: 35%; left: 10%; right: 10%; color: var(--muted); text-align: center; }
 
 /* A quiet four-axis viewport instrument, using the terminal's warm palette. */
-.orientation-indicator { position:absolute; z-index:1; top:12px; right:12px; width:116px; border:1px solid color-mix(in srgb,var(--rule) 65%,var(--bg)); background:var(--window-bg); color:var(--muted); font-size:9px; line-height:1.2; pointer-events:none; user-select:none; }
+.orientation-indicator { position:absolute; z-index:1; top:12px; right:12px; width:108px; border:1px solid color-mix(in srgb,var(--rule) 65%,var(--bg)); background:var(--window-bg); color:var(--muted); font-size:9px; line-height:1.2; pointer-events:none; user-select:none; }
 .orientation-indicator[hidden] { display:none; }
 .orientation-heading { gap:4px; padding:0 6px; }
-.orientation-indicator svg { display:block; width:100%; height:88px; overflow:visible; }
-.orientation-indicator svg text { font:10px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; text-anchor:middle; dominant-baseline:central; }
+.orientation-indicator .orientation-diagram { display:block; width:100%; height:80px; overflow:visible; }
+.orientation-indicator .orientation-diagram text { font:10px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; text-anchor:middle; dominant-baseline:central; }
 .orientation-axis { stroke:currentColor; stroke-width:1; }
 .orientation-negative { stroke-dasharray:1 4; opacity:.35; }
 .orientation-w { stroke-dasharray:2 2; }
 .orientation-readout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:10px; row-gap:4px; padding:0 8px 7px; font-variant-numeric:tabular-nums; }
 .orientation-readout>span { display:flex; justify-content:space-between; gap:4px; }
 .orientation-readout output { color:var(--muted); }
-.orientation-indicator.is-compact { top:0; right:0; width:min(100%,250px); }
-.orientation-indicator.is-compact .orientation-heading,.orientation-indicator.is-compact svg { display:none; }
+.orientation-indicator.is-compact { top:0; right:0; width:min(100%,234px); }
+.orientation-indicator.is-compact .orientation-heading,.orientation-indicator.is-compact .orientation-diagram { display:none; }
 .orientation-indicator.is-compact .orientation-readout { grid-template-columns:repeat(4,minmax(0,1fr)); padding:6px 8px; column-gap:10px; }
 
 /* One nonmodal drawer: all settings enter and leave together. */
@@ -93,8 +93,6 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 .drawer-toggle { appearance: none; width: 100%; height: calc(var(--drawer-handle-height) - 1px); border: 0; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); border-radius: 0; font-family: inherit; text-align: left; cursor: pointer; }
 .drawer-toggle:hover { color: var(--gold); }
 .drawer-toggle:focus-visible { outline-offset: -4px; }
-.drawer-hint { color: var(--faint); }
-.drawer-arrow { margin-left: 6px; color: var(--accent); }
 .drawer-content { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; padding: 13px 16px 17px; max-height: calc(75svh - var(--drawer-handle-height)); overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--rule) var(--bg); }
 .settings-section { border-left: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); padding-left: 18px; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; color: var(--accent); min-height: 18px; }
@@ -179,8 +177,8 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
   .skill-group:last-child { margin-bottom:0; }
   .skill-group h2 { margin-bottom:4px; }
   #tesseract-scene { margin-top:20px; }
-  .orientation-indicator { width:96px; top:4px; right:4px; font-size:8px; }
-  .orientation-indicator svg { height:74px; }
+  .orientation-indicator { width:90px; top:4px; right:4px; font-size:8px; }
+  .orientation-indicator .orientation-diagram { height:68px; }
   .orientation-heading.window-titlebar { gap:3px; padding:0 3px; font-size:9px; }
   .orientation-readout { column-gap:8px; padding:0 6px 6px; }
   .window-titlebar { padding:0 11px; }
@@ -196,32 +194,43 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 @media(min-width:901px) and (max-height:850px) { .page { padding-top:32px; padding-bottom:32px; } footer { bottom:16px; } }
 @media(min-width:901px) and (max-width:1100px) and (max-height:850px) { .page { padding-top:12px; padding-bottom:36px; } }
 
-/* Reveal the window equally above and below its central horizontal line. */
+/* Corner sparks and traced edges assemble the same frame as the 4-D scene. */
 .portfolio-window { position:relative; }
-:is(.portfolio-window,.orientation-indicator).is-opening>:is(.window-titlebar,.orientation-heading) { position:relative; z-index:2; animation:terminal-titlebar 1.52s cubic-bezier(.2,.75,.2,1) both; }
-:is(.portfolio-window,.orientation-indicator).is-opening { animation:terminal-open 1.52s cubic-bezier(.2,.75,.2,1) both; }
-:is(.portfolio-window,.orientation-indicator).is-opening::before,:is(.portfolio-window,.orientation-indicator).is-opening::after {
-  content:''; position:absolute; z-index:1; left:0; right:0; top:50%; height:1px;
-  background:color-mix(in srgb,var(--rule) 72%,var(--bg)); pointer-events:none; transform:translateY(-50%);
-  animation:terminal-opening-top 1.52s cubic-bezier(.2,.75,.2,1) both;
+.is-assembling { overflow:visible; animation:wireframe-shell var(--assembly-duration) linear var(--assembly-delay) both; }
+.is-assembling>.assembly-frame { position:absolute; z-index:3; top:0; left:0; width:100%; height:100%; overflow:visible; pointer-events:none; animation:wireframe-finish var(--assembly-duration) linear var(--assembly-delay) both; }
+.assembly-edge { fill:none; stroke:var(--gold); stroke-width:1; stroke-dasharray:1; stroke-dashoffset:1; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 2px #ffd16e55); animation:wireframe-edge calc(var(--assembly-duration) * .48) cubic-bezier(.25,.6,.2,1) calc(var(--assembly-delay) + var(--assembly-duration) * (.09 + var(--trace-phase))) both; }
+.assembly-corner { fill:none; stroke:var(--cream); stroke-width:1; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 3px #ffd16e99); animation:wireframe-corner calc(var(--assembly-duration) * .75) ease-out calc(var(--assembly-delay) + var(--assembly-duration) * var(--spark-phase)) both; }
+.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>:is(.window-title,.window-chrome) { animation:wireframe-content calc(var(--assembly-duration) * .24) ease-out calc(var(--assembly-delay) + var(--assembly-duration) * .35) both; }
+.portfolio-window.is-assembling :is(.intro,.experience,.education-group,.skills),.orientation-indicator.is-assembling :is(.orientation-diagram,.orientation-readout) {
+  animation:wireframe-content calc(var(--assembly-duration) * .26) ease-out calc(var(--assembly-delay) + var(--assembly-duration) * var(--content-phase,.46)) both;
 }
-:is(.portfolio-window,.orientation-indicator).is-opening::after { animation-name:terminal-opening-bottom; }
-@keyframes terminal-open {
-  0%,12% { clip-path:inset(calc(50% - .5px) 0 calc(50% - .5px) 0); }
-  100% { clip-path:inset(0); }
+.portfolio-window.is-assembling .intro { --content-phase:.43; }
+.portfolio-window.is-assembling .experience { --content-phase:.52; }
+.portfolio-window.is-assembling .education-group { --content-phase:.59; }
+.portfolio-window.is-assembling .skills { --content-phase:.64; }
+.orientation-indicator.is-assembling .orientation-readout { --content-phase:.56; }
+@keyframes wireframe-shell {
+  0%,32% { background:transparent; border-color:transparent; }
+  62% { background:var(--window-bg); border-color:transparent; }
+  82%,100% { background:var(--window-bg); border-color:var(--assembly-border); }
 }
-@keyframes terminal-titlebar {
-  0%,12% { transform:translateY(var(--opening-offset,0px)); }
-  100% { transform:translateY(0); }
+@keyframes wireframe-edge {
+  0% { stroke-dashoffset:1; stroke:var(--cream); }
+  55% { stroke:var(--gold); }
+  100% { stroke-dashoffset:0; stroke:var(--accent); }
 }
-@keyframes terminal-opening-top {
-  0%,12% { top:50%; opacity:1; }
-  100% { top:0; opacity:1; }
+@keyframes wireframe-corner {
+  0% { opacity:0; }
+  12%,36% { opacity:1; stroke:var(--cream); }
+  65% { opacity:.65; stroke:var(--gold); }
+  100% { opacity:0; stroke:var(--accent); }
 }
-@keyframes terminal-opening-bottom {
-  0%,12% { top:50%; opacity:1; }
-  100% { top:100%; opacity:1; }
-}
+@keyframes wireframe-finish { 0%,74% { opacity:1; } 100% { opacity:0; } }
+@keyframes wireframe-content { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+/* Trace the whole visible settings frame as it rises into view. */
+.drawer-toggle { position:relative; }
+.settings-drawer.is-entering { overflow:visible; }
 @media(prefers-reduced-motion:reduce) {
-  :is(.portfolio-window,.orientation-indicator).is-opening,:is(.portfolio-window,.orientation-indicator).is-opening>:is(.window-titlebar,.orientation-heading),:is(.portfolio-window,.orientation-indicator).is-opening::before,:is(.portfolio-window,.orientation-indicator).is-opening::after { animation:none; }
+  .is-assembling,.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>:is(.window-title,.window-chrome),.portfolio-window.is-assembling :is(.intro,.experience,.education-group,.skills),.orientation-indicator.is-assembling :is(.orientation-diagram,.orientation-readout) { animation:none; }
+  .assembly-frame { display:none; }
 }

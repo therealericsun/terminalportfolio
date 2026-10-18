@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance } from './intro.js';
+import { Entrance } from './intro.js?v=wireframe-12';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -32,6 +32,8 @@ const backdropPalette = palette.map((_, i) => {
 const rotationSpeed = 4;
 // Rebase edge width so 1× uses the previous 1.3× thickness.
 const edgeWidthScale = .91;
+// Keep both renders slightly inset without changing their ASCII glyph size.
+const sceneScale = .94;
 const orientation = initialOrientation();
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
 const initialSeed = 'tesseract';
@@ -46,12 +48,18 @@ seedInput.value = settings.seed;
 const followMouseToggle = document.querySelector('#mouse-follow');
 const extraPlanes = ['xw', 'yw', 'zw'];
 const drawer = document.querySelector('#settings-drawer');
-const finishDrawerEntrance = () => drawer.classList.remove('is-entering');
-drawer.addEventListener('animationend', finishDrawerEntrance, { once: true });
+const drawerToggle = document.querySelector('#drawer-toggle');
+const drawerEntrance = new Entrance(drawerToggle, reduced.matches, { duration: 1.3, delay: .45 });
+const finishDrawerEntrance = () => {
+  drawer.classList.remove('is-entering');
+  drawerEntrance.finish();
+};
+drawer.addEventListener('animationend', event => {
+  if (event.target === drawer && event.animationName === 'drawer-arrive') finishDrawerEntrance();
+});
 drawer.addEventListener('focusin', finishDrawerEntrance, { once: true });
 if (reduced.matches) finishDrawerEntrance();
 else drawer.classList.add('is-entering');
-const drawerToggle = document.querySelector('#drawer-toggle');
 const drawerContent = document.querySelector('#drawer-content');
 const sliders = [...drawer.querySelectorAll('input[type="range"]')];
 const autoRotateToggle = document.querySelector('#auto-rotate');
@@ -60,6 +68,8 @@ let foregroundRaster, backdropRaster;
 let time = 0, frame = 0, previous = 0, accumulator = 0, activeControl = null;
 let assemblyTime = reduced.matches ? assemblyDuration : 0;
 let paused = reduced.matches, dragging = null;
+let motionReduced = reduced.matches;
+let drawerOpenedByHover = false, hoverCloseTimer = 0;
 let backdropWidth = 0, backdropHeight = 0, backdropDensity = 1;
 let lastMouse = null, lastMouseMovement = -Infinity;
 let scrollTouch = null, scrollNeedsDraw = false;
@@ -78,7 +88,7 @@ function initOrientationIndicator() {
   const axes = ['X', 'Y', 'Z', 'W'];
   const colors = ['var(--accent)', 'var(--gold)', 'var(--text)', 'var(--cream)'];
   indicator.innerHTML = `<div class="window-titlebar orientation-heading" aria-hidden="true"><span class="window-title">~/axis</span><span class="window-chrome">─ □ ×</span></div>
-    <svg viewBox="0 0 120 104" aria-hidden="true">
+    <svg class="orientation-diagram" viewBox="0 0 120 104" aria-hidden="true">
       <circle cx="60" cy="51" r="31" fill="none" stroke="var(--rule)" stroke-dasharray="1 5" opacity=".4"/>
       ${axes.map((axis, i) => `<g data-axis="${axis}" style="color:${colors[i]}">
         <line class="orientation-axis orientation-negative" x1="60" y1="51"/>
@@ -91,15 +101,8 @@ function initOrientationIndicator() {
     return { group, lines: group.querySelectorAll('line'), tip: group.querySelector('rect'),
       label: group.querySelector('text'), output: indicator.querySelector(`[data-facing="${axis}"]`) };
   });
-  let entered = false;
-  const finishOpening = () => {
-    indicator.classList.remove('is-opening');
-    indicator.dataset.entrance = 'complete';
-  };
-  indicator.addEventListener('animationend', event => {
-    if (event.target === indicator) finishOpening();
-  });
-  reduced.addEventListener('change', () => { if (reduced.matches) finishOpening(); });
+  let axisEntrance;
+  reduced.addEventListener('change', () => { if (reduced.matches) axisEntrance?.finish(); });
   return () => {
     const frame = orientationAxes(orientation, settings.depth);
     const labels = [];
@@ -137,15 +140,8 @@ function initOrientationIndicator() {
     }
     indicator.hidden = false;
     indicator.classList.toggle('is-compact', height < 180);
-    if (!entered) {
-      entered = true;
-      if (reduced.matches) finishOpening();
-      else {
-        indicator.style.setProperty('--opening-offset', `${indicator.clientHeight / 2 - .5}px`);
-        indicator.classList.add('is-opening');
-        indicator.dataset.entrance = 'opening';
-      }
-    }
+    if (!axisEntrance) axisEntrance = new Entrance(indicator, reduced.matches, { duration: 1.55, delay: .12 });
+    else if (reduced.matches && !axisEntrance.finished) axisEntrance.finish();
     indicator.dataset.angles = canvas.dataset.angles;
     indicator.setAttribute('aria-label', `Four-dimensional facing direction: ${frame.map(({ label, facing }) => `${label} ${facing.toFixed(2)}`).join(', ')}`);
   };
@@ -385,7 +381,7 @@ function draw() {
   const screen = fullPoints.map(p => camera(p, cols, rows, cellW / cellH, settings.depth));
   const extentX = Math.max(...screen.map(p => Math.abs(p[0] - cols / 2)));
   const extentY = Math.max(...screen.map(p => Math.abs(p[1] - rows / 2)));
-  const fit = Math.min(shapeScale, cols * .44 / extentX, rows * .44 / extentY);
+  const fit = Math.min(shapeScale, cols * .44 / extentX, rows * .44 / extentY) * sceneScale;
   const points = fullPoints.map(p => p.map(v => v * unfold));
   renderAscii(foregroundRaster, points, assembling, fit);
   canvas.dataset.framing = fit.toFixed(3);
@@ -435,6 +431,7 @@ function syncControls() {
 function tick(now) {
   frame = 0;
   if (document.hidden) { previous = 0; return; }
+  applyMotionPreference();
   const dt = previous ? Math.min((now - previous) / 1000, .1) : 0;
   previous = now; accumulator += dt;
   if (!entrance.finished) entrance.update(dt);
@@ -459,18 +456,21 @@ function tick(now) {
 function start() {
   if (!frame && !document.hidden) frame = requestAnimationFrame(tick);
 }
-reduced.addEventListener('change', () => {
-  paused = reduced.matches; assemblyTime = assemblyDuration;
-  entrance.finish(); finishDrawerEntrance(); draw(); start();
-});
+function applyMotionPreference() {
+  if (motionReduced === reduced.matches) return;
+  motionReduced = reduced.matches;
+  paused = motionReduced; assemblyTime = assemblyDuration;
+  entrance.finish(); finishDrawerEntrance();
+}
+reduced.addEventListener('change', () => { applyMotionPreference(); draw(); start(); });
 document.addEventListener('visibilitychange', () => { previous = 0; lastMouse = null; scrollTouch = null; start(); });
-function setDrawerOpen(open) {
+function setDrawerOpen(open, fromHover = false) {
+  clearTimeout(hoverCloseTimer);
+  drawerOpenedByHover = open && fromHover;
   finishDrawerEntrance();
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
   drawer.classList.toggle('is-open', open);
   drawerToggle.setAttribute('aria-expanded', String(open));
-  drawerToggle.querySelector('.drawer-hint').textContent = open ? 'close' : 'open';
-  drawerToggle.querySelector('.drawer-arrow').textContent = open ? '↓' : '↑';
   drawerContent.inert = !open;
   drawerContent.setAttribute('aria-hidden', String(!open));
   document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
@@ -487,7 +487,26 @@ function setDrawerOpen(open) {
 new ResizeObserver(() => {
   if (drawer.classList.contains('is-open')) document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
 }).observe(drawer);
-drawerToggle.addEventListener('click', () => setDrawerOpen(!drawer.classList.contains('is-open')));
+// Hover opens a temporary drawer on mouse/trackpad devices; touch keeps tap.
+const canHover = matchMedia('(hover: hover) and (pointer: fine)');
+function closeAfterHover() {
+  clearTimeout(hoverCloseTimer);
+  if (!drawerOpenedByHover) return;
+  hoverCloseTimer = setTimeout(() => {
+    if (!drawer.matches(':hover') && !drawer.contains(document.activeElement)) setDrawerOpen(false);
+  }, 180);
+}
+drawer.addEventListener('pointerenter', event => {
+  if (event.pointerType !== 'mouse' || !canHover.matches) return;
+  clearTimeout(hoverCloseTimer);
+  if (!drawer.classList.contains('is-open')) setDrawerOpen(true, true);
+});
+drawer.addEventListener('pointerleave', closeAfterHover);
+drawer.addEventListener('focusout', closeAfterHover);
+drawerToggle.addEventListener('click', () => {
+  if (drawerOpenedByHover) { clearTimeout(hoverCloseTimer); drawerOpenedByHover = false; }
+  else setDrawerOpen(!drawer.classList.contains('is-open'));
+});
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && drawer.classList.contains('is-open')) setDrawerOpen(false);
 });
