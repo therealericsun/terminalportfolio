@@ -24,6 +24,8 @@ const background = theme.getPropertyValue('--bg').trim();
 const palette = createAsciiPalette(theme);
 // Rebase the slider: 1× is the previous 2× rotation rate.
 const rotationSpeed = 4;
+// Rebase edge width so 1× uses the previous 0.7× thickness.
+const edgeWidthScale = .7;
 const orientation = initialOrientation();
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
 const initialSeed = randomSeed();
@@ -151,7 +153,7 @@ function draw() {
         const distanceFromEnd = Math.min(fraction, 1 - fraction);
         // Two bright trace heads grow from the endpoints and meet midway.
         if (distanceFromEnd > progress * .5) continue;
-        const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * .043 * settings.edgeWidth);
+        const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * .043 * edgeWidthScale * settings.edgeWidth);
         const trace = assembling && progress < .99 && Math.abs(distanceFromEnd - progress * .5) < .022;
         const light = Math.max(illumination(normal, p), trace ? .98 : 0);
         putEdge(project(p), light, light < .45 ? direction : 0);
@@ -165,7 +167,7 @@ function draw() {
     for (let lat = 1; lat < 8; lat++) for (let lon = 0; lon < 14; lon++) {
       const phi = lat * Math.PI / 8, theta = lon * Math.PI / 7;
       const normal = [Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta)];
-      const p = vertex.map((v, i) => v + normal[i] * .061 * settings.edgeWidth);
+      const p = vertex.map((v, i) => v + normal[i] * .061 * edgeWidthScale * settings.edgeWidth);
       const spark = assembling ? (1 - smooth((assemblyTime - .4) / .65)) * reveal : 0;
       putEdge(project(p), Math.max(illumination(normal, p) * reveal, spark));
     }
