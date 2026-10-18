@@ -194,6 +194,7 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 }
 @media(prefers-reduced-motion:reduce) { .settings-drawer { transition: none; } .settings-drawer.is-entering { animation:none; } }
 @media(min-width:901px) and (max-height:850px) { .page { padding-top:32px; padding-bottom:32px; } footer { bottom:16px; } }
+@media(min-width:901px) and (max-width:1100px) and (max-height:850px) { .page { padding-top:12px; padding-bottom:36px; } }
 
 /* Reveal the window equally above and below its central horizontal line. */
 .portfolio-window { position:relative; }

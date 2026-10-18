@@ -12,8 +12,8 @@
     document.documentElement.classList.add('is-loading');
     window.addEventListener('error', () => document.documentElement.classList.remove('is-loading'));
   </script>
-  <link rel="stylesheet" href="./style.css?v=tesseract-default-6">
-  <script type="module" src="./tesseract.js?v=tesseract-default-6" onerror="document.documentElement.classList.remove('is-loading')"></script>
+  <link rel="stylesheet" href="./style.css?v=portfolio-defaults-8">
+  <script type="module" src="./tesseract.js?v=portfolio-defaults-8" onerror="document.documentElement.classList.remove('is-loading')"></script>
 </head>
 <body>
   <canvas id="render-backdrop" aria-hidden="true"></canvas>
@@ -25,7 +25,7 @@
       <div class="intro-main">
         <h1 class="ascii-name" aria-label="Eric Sun"><canvas id="ascii-name-canvas" aria-hidden="true" hidden></canvas><span class="name-fallback" aria-hidden="true">ERIC SUN</span></h1>
         <p class="contact-line"><a href="mailto:ericsun@seas.upenn.edu">Email</a> <a href="https://github.com/therealericsun" target="_blank" rel="noopener noreferrer">GitHub</a> <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank" rel="noopener noreferrer">LinkedIn</a> <a href="./Eric_Sun_Resume.pdf" download>Resume</a></p>
-        <p class="tagline">Quantitative developer based in New York.</p>
+        <p class="tagline">Quantitative developer based in New York interested in machine learning and numeric simulations.</p>
       </div>
     </header>
 
@@ -108,7 +108,7 @@
         <div class="panel-heading"><span id="settings-heading">settings</span></div>
         <div class="extra-settings">
         <label class="setting" for="projection-depth"><span class="setting-heading"><span>4D perspective</span><output id="value-depth" for="projection-depth">5.0</output></span><input id="projection-depth" type="range" min="3" max="7" step="0.1" value="5.0" aria-label="4D perspective distance"></label>
-        <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">50%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="50" aria-label="Face texture amount"></label>
+        <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">60%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="60" aria-label="Face texture amount"></label>
         <label class="setting" for="edge-width"><span class="setting-heading"><span>edge width</span><output id="value-edge-width" for="edge-width">1.0×</output></span><input id="edge-width" type="range" min="0.5" max="1.5" step="0.1" value="1" aria-label="Edge width"></label>
         <form id="shape-form" class="seed-control">
           <label for="shape-seed">shape / seed</label>

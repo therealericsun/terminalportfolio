@@ -30,14 +30,14 @@ const backdropPalette = palette.map((_, i) => {
 });
 // Rebase the slider: 1× is the previous 2× rotation rate.
 const rotationSpeed = 4;
-// Rebase edge width so 1× uses the previous 0.7× thickness.
-const edgeWidthScale = .7;
+// Rebase edge width so 1× uses the previous 1.3× thickness.
+const edgeWidthScale = .91;
 const orientation = initialOrientation();
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
 const initialSeed = 'tesseract';
 const tesseractShape = { vertices: tesseractVertices, edges: tesseractEdges, faces: tesseractFaces };
 const shapeForSeed = seed => seed.toLowerCase() === 'tesseract' ? tesseractShape : generatePolytope(seed);
-const settings = { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed };
+const settings = { speed: 1, depth: 5, detail: .6, edgeWidth: 1, followMouse: true, seed: initialSeed };
 let shape = shapeForSeed(settings.seed);
 let shapeScale = framingScaleFor(shape.vertices);
 const updateOrientationIndicator = initOrientationIndicator();
@@ -522,7 +522,7 @@ for (const slider of sliders) {
 autoRotateToggle.addEventListener('change', () => { paused = !autoRotateToggle.checked; draw(); start(); });
 document.querySelector('#rotation-reset').addEventListener('click', () => {
   Object.assign(orientation, initialOrientation());
-  Object.assign(settings, { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed });
+  Object.assign(settings, { speed: 1, depth: 5, detail: .6, edgeWidth: 1, followMouse: true, seed: initialSeed });
   shape = shapeForSeed(settings.seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = settings.seed;
   lastMouse = null; lastMouseMovement = -Infinity;
   time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
