@@ -37,7 +37,9 @@ export function initAsciiName() {
     const capHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
     const baseline = (height - capHeight - 6) / 2 + metrics.actualBoundingBoxAscent;
     ink.save(); ink.scale(fit, 1);
-    ink.fillText('ERIC SUN', 0, baseline);
+    ink.fillText('ERIC', 0, baseline);
+    const wordGap = ink.measureText(' ').width * .8;
+    ink.fillText('SUN', ink.measureText('ERIC').width + wordGap, baseline);
     ink.restore();
     const pixels = ink.getImageData(0, 0, mask.width, mask.height).data;
     const sample = (x, y) => {

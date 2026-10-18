@@ -5,7 +5,9 @@ import { Entrance } from './intro.js';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
-const ctx = canvas.getContext('2d', { alpha: false });
+const ctx = canvas.getContext('2d');
+const backdrop = document.querySelector('#render-backdrop');
+const backdropCtx = backdrop.getContext('2d');
 const scene = document.querySelector('#tesseract-scene');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const setNameFontSize = initAsciiName();
@@ -20,8 +22,12 @@ const faceRamp = ' .,:;+=*';
 // The text and simulation share the same CSS color tokens. Interpolate the
 // reference's ember → orange → gold → cream ramp using geometric brightness.
 const theme = getComputedStyle(document.documentElement);
-const background = theme.getPropertyValue('--bg').trim();
 const palette = createAsciiPalette(theme);
+// Retain the directional highlights and deep shadows in the monochrome echo.
+const backdropPalette = palette.map((_, i) => {
+  const gray = Math.round(12 + 228 * (i / (palette.length - 1)) ** 1.35);
+  return `rgb(${gray},${gray},${gray})`;
+});
 // Rebase the slider: 1× is the previous 2× rotation rate.
 const rotationSpeed = 4;
 // Rebase edge width so 1× uses the previous 0.7× thickness.
@@ -46,10 +52,11 @@ const drawerContent = document.querySelector('#drawer-content');
 const sliders = [...drawer.querySelectorAll('input[type="range"]')];
 const autoRotateToggle = document.querySelector('#auto-rotate');
 let width = 0, height = 0, cols = 0, rows = 0, cellW = 0, cellH = 0;
-let edgeDepth, edgeLight, edgeGlyph, surfaceDepth, surfaceLight, surfaceHatch;
+let foregroundRaster, backdropRaster;
 let time = 0, frame = 0, previous = 0, accumulator = 0, activeControl = null;
 let assemblyTime = reduced.matches ? assemblyDuration : 0;
-let paused = reduced.matches, dragging = null, visible = false;
+let paused = reduced.matches, dragging = null;
+let backdropWidth = 0, backdropHeight = 0, backdropDensity = 1;
 let lastMouse = null, lastMouseMovement = -Infinity;
 
 function resize() {
@@ -68,63 +75,112 @@ function resize() {
   cellW = ctx.measureText('M').width;
   cellH = fontSize * 1.22;
   cols = Math.floor(width / cellW); rows = Math.floor(height / cellH);
-  const size = cols * rows;
-  edgeDepth = new Float32Array(size); edgeLight = new Float32Array(size);
-  edgeGlyph = new Uint8Array(size);
-  surfaceDepth = new Float32Array(size); surfaceLight = new Float32Array(size);
-  surfaceHatch = new Uint8Array(size);
+  foregroundRaster = createRaster(ctx, width, height, cols, rows, palette);
+  prepareBackdrop();
   draw();
 }
-function putEdge(p, light, glyph = 0) {
-  const x = Math.floor(p[0]), y = Math.floor(p[1]);
-  if (x < 0 || x >= cols || y < 0 || y >= rows) return;
-  const i = x + y * cols;
-  if (p[2] > edgeDepth[i]) {
-    edgeDepth[i] = p[2]; edgeLight[i] = light; edgeGlyph[i] = glyph;
-  }
+function createRaster(context, width, height, cols, rows, colors) {
+  const size = cols * rows;
+  return {
+    ctx: context, width, height, cols, rows, colors,
+    edgeDepth: new Float32Array(size), edgeLight: new Float32Array(size),
+    edgeGlyph: new Uint8Array(size), surfaceDepth: new Float32Array(size),
+    surfaceLight: new Float32Array(size), surfaceHatch: new Uint8Array(size),
+  };
 }
-// Perspective-correct face rasterizer. Faces are translucent so the internal
-// edges remain visible, but nearer struts still occlude farther struts.
-function triangle(points, uv, light) {
-  const [a, b, c] = points;
-  const area = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
-  if (Math.abs(area) < .001) return;
-  const minX = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0])));
-  const maxX = Math.min(cols - 1, Math.ceil(Math.max(a[0], b[0], c[0])));
-  const minY = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1])));
-  const maxY = Math.min(rows - 1, Math.ceil(Math.max(a[1], b[1], c[1])));
-  for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
-    const px = x + .5, py = y + .5;
-    const u = ((b[1] - c[1]) * (px - c[0]) + (c[0] - b[0]) * (py - c[1])) / area;
-    const v = ((c[1] - a[1]) * (px - c[0]) + (a[0] - c[0]) * (py - c[1])) / area;
-    const w = 1 - u - v;
-    if (u < 0 || v < 0 || w < 0) continue;
-    const q = [u / (7.8 - a[2]), v / (7.8 - b[2]), w / (7.8 - c[2])];
-    const sum = q[0] + q[1] + q[2], z = 7.8 - 1 / sum;
+function prepareBackdrop() {
+  if (!foregroundRaster || !backdropWidth || !backdropHeight) return;
+  // Enlarge the geometry on its own character grid, keeping every glyph at
+  // exactly the foreground's CSS font size instead of scaling painted text.
+  backdropCtx.setTransform(backdropDensity, 0, 0, backdropDensity, 0, 0);
+  backdropCtx.font = ctx.font;
+  backdropCtx.textAlign = 'center'; backdropCtx.textBaseline = 'middle';
+  backdrop.dataset.fontSize = canvas.dataset.fontSize;
+  backdropRaster = createRaster(backdropCtx, backdropWidth, backdropHeight,
+    Math.floor(backdropWidth / cellW), Math.floor(backdropHeight / cellH), backdropPalette);
+}
+function resizeBackdrop() {
+  const bounds = backdrop.getBoundingClientRect();
+  backdropWidth = bounds.width; backdropHeight = bounds.height;
+  if (!backdropWidth || !backdropHeight) return;
+  // Keep small text sharp while bounding backing-store memory on large displays.
+  backdropDensity = Math.min(devicePixelRatio || 1, 2, Math.sqrt(4000000 / (backdropWidth * backdropHeight)));
+  backdrop.width = Math.round(backdropWidth * backdropDensity);
+  backdrop.height = Math.round(backdropHeight * backdropDensity);
+  prepareBackdrop();
+  draw();
+}
+function renderAscii(target, points, assembling, zoom = 1) {
+  const { ctx, width, height, cols, rows, colors,
+    edgeDepth, edgeLight, edgeGlyph, surfaceDepth, surfaceLight, surfaceHatch } = target;
+  function putEdge(p, light, glyph = 0) {
+    const x = Math.floor(p[0]), y = Math.floor(p[1]);
+    if (x < 0 || x >= cols || y < 0 || y >= rows) return;
     const i = x + y * cols;
-    if (z <= surfaceDepth[i]) continue;
-    const s = (q[0] * uv[0][0] + q[1] * uv[1][0] + q[2] * uv[2][0]) / sum;
-    const t = (q[0] * uv[0][1] + q[1] * uv[1][1] + q[2] * uv[2][1]) / sum;
-    // A few fine diagonal bands follow each face through the projection.
-    // Open space between them keeps the internal structure legible.
-    const stripe = (s + t) * 4;
-    const hatch = Math.abs(stripe - Math.round(stripe)) < .07;
-    surfaceDepth[i] = z;
-    surfaceLight[i] = light * (hatch ? .34 : .23);
-    surfaceHatch[i] = Number(hatch);
+    if (p[2] > edgeDepth[i]) {
+      edgeDepth[i] = p[2]; edgeLight[i] = light; edgeGlyph[i] = glyph;
+    }
   }
-}
-function draw() {
-  if (!cols || !rows) return;
+  // Perspective-correct face rasterizer. Faces are translucent so the internal
+  // edges remain visible, but nearer struts still occlude farther struts.
+  function triangle(points, uv, light) {
+    const [a, b, c] = points;
+    const area = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+    if (Math.abs(area) < .001) return;
+    const minX = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0])));
+    const maxX = Math.min(cols - 1, Math.ceil(Math.max(a[0], b[0], c[0])));
+    const minY = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1])));
+    const maxY = Math.min(rows - 1, Math.ceil(Math.max(a[1], b[1], c[1])));
+    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+      const px = x + .5, py = y + .5;
+      const u = ((b[1] - c[1]) * (px - c[0]) + (c[0] - b[0]) * (py - c[1])) / area;
+      const v = ((c[1] - a[1]) * (px - c[0]) + (a[0] - c[0]) * (py - c[1])) / area;
+      const w = 1 - u - v;
+      if (u < 0 || v < 0 || w < 0) continue;
+      const q = [u / (7.8 - a[2]), v / (7.8 - b[2]), w / (7.8 - c[2])];
+      const sum = q[0] + q[1] + q[2], z = 7.8 - 1 / sum;
+      const i = x + y * cols;
+      if (z <= surfaceDepth[i]) continue;
+      const s = (q[0] * uv[0][0] + q[1] * uv[1][0] + q[2] * uv[2][0]) / sum;
+      const t = (q[0] * uv[0][1] + q[1] * uv[1][1] + q[2] * uv[2][1]) / sum;
+      // A few fine diagonal bands follow each face through the projection.
+      // Open space between them keeps the internal structure legible.
+      const stripe = (s + t) * 4;
+      const hatch = Math.abs(stripe - Math.round(stripe)) < .07;
+      surfaceDepth[i] = z;
+      surfaceLight[i] = light * (hatch ? .34 : .23);
+      surfaceHatch[i] = Number(hatch);
+    }
+  }
   edgeDepth.fill(-Infinity); edgeLight.fill(0); edgeGlyph.fill(0);
   surfaceDepth.fill(-Infinity); surfaceLight.fill(0); surfaceHatch.fill(0);
-  const assembling = assemblyTime < assemblyDuration;
-  // The structure gently unfolds to full size while its vertices connect.
-  // This clock advances only while the scene is visible, independently of the
-  // faster simulation clock, and is never reset by resizing or font loading.
-  const unfold = assembling ? .82 + .18 * smooth(assemblyTime / 1.2) : 1;
-  const points = projectOrientation(orientation, settings.depth, shape.vertices).map(p => p.map(v => v * unfold));
-  const project = p => camera(p, cols, rows, cellW / cellH, settings.depth);
+  const cameraCenter = camera([0, 0, 0], foregroundRaster.cols, foregroundRaster.rows, cellW / cellH, settings.depth);
+  const cameraUnit = camera([1, 1, 0], foregroundRaster.cols, foregroundRaster.rows, cellW / cellH, settings.depth);
+  const scaleX = (cameraUnit[0] - cameraCenter[0]) * zoom;
+  const scaleY = (cameraCenter[1] - cameraUnit[1]) * zoom;
+  const project = p => {
+    if (zoom === 1) return camera(p, cols, rows, cellW / cellH, settings.depth);
+    const perspective = 7.8 / (7.8 - p[2]);
+    return [cols / 2 + p[0] * perspective * scaleX,
+      rows / 2 - p[1] * perspective * scaleY, p[2]];
+  };
+  function putBackdropEdge(px, py, pz, normal, diffuse, trace, direction) {
+    const perspective = 7.8 / (7.8 - pz);
+    const x = Math.floor(cols / 2 + px * perspective * scaleX);
+    const y = Math.floor(rows / 2 - py * perspective * scaleY);
+    if (x < 0 || x >= cols || y < 0 || y >= rows) return;
+    const i = x + y * cols;
+    if (pz <= edgeDepth[i]) return;
+    // Match illumination() exactly, evaluating only depth-visible samples.
+    // Scalar arithmetic avoids temporary vectors in the enlarged strut pass.
+    const eyeLength = Math.hypot(px, py, 8 - pz);
+    const hx = -3 / Math.sqrt(61) - px / eyeLength;
+    const hy = -4 / Math.sqrt(61) - py / eyeLength;
+    const hz = 6 / Math.sqrt(61) + (8 - pz) / eyeLength;
+    const specular = Math.max(0, (normal[0] * hx + normal[1] * hy + normal[2] * hz) / Math.hypot(hx, hy, hz)) ** 28;
+    const light = Math.max(Math.min(1, .12 + .7 * diffuse + .35 * specular), trace ? .98 : 0);
+    edgeDepth[i] = pz; edgeLight[i] = light; edgeGlyph[i] = light < .45 ? direction : 0;
+  }
   const projected = points.map(project);
   if (settings.detail > 0) for (const face of shape.faces) {
     const p = face.map(i => points[i]);
@@ -148,15 +204,23 @@ function draw() {
     for (let ring = 0; ring < 14; ring++) {
       const theta = ring * Math.PI * 2 / 14;
       const normal = tangent.map((v, i) => v * Math.cos(theta) + bitangent[i] * Math.sin(theta));
+      const diffuse = Math.max(0, (-3 * normal[0] - 4 * normal[1] + 6 * normal[2]) / Math.sqrt(61));
       for (let step = 0; step <= steps; step++) {
         const fraction = step / steps;
         const distanceFromEnd = Math.min(fraction, 1 - fraction);
         // Two bright trace heads grow from the endpoints and meet midway.
         if (distanceFromEnd > progress * .5) continue;
-        const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * .043 * edgeWidthScale * settings.edgeWidth);
         const trace = assembling && progress < .99 && Math.abs(distanceFromEnd - progress * .5) < .022;
-        const light = Math.max(illumination(normal, p), trace ? .98 : 0);
-        putEdge(project(p), light, light < .45 ? direction : 0);
+        const radius = .043 * edgeWidthScale * settings.edgeWidth;
+        if (zoom !== 1) {
+          putBackdropEdge(start[0] + delta[0] * fraction + normal[0] * radius,
+            start[1] + delta[1] * fraction + normal[1] * radius,
+            start[2] + delta[2] * fraction + normal[2] * radius, normal, diffuse, trace, direction);
+        } else {
+          const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * radius);
+          const light = Math.max(illumination(normal, p), trace ? .98 : 0);
+          putEdge(project(p), light, light < .45 ? direction : 0);
+        }
       }
     }
   }
@@ -172,7 +236,7 @@ function draw() {
       putEdge(project(p), Math.max(illumination(normal, p) * reveal, spark));
     }
   }
-  ctx.fillStyle = background; ctx.fillRect(0, 0, width, height);
+  ctx.clearRect(0, 0, width, height);
   const batches = Array.from({ length: palette.length }, () => []);
   for (let i = 0; i < cols * rows; i++) {
     const hasEdge = edgeDepth[i] !== -Infinity;
@@ -182,7 +246,9 @@ function draw() {
     // the surface characters and continuous, lightly accented hatching.
     if (!hasEdge && (settings.detail === 0 ||
       (!surfaceHatch[i] && (x % 2 * 2 + y % 2) / 4 >= .25 + .75 * settings.detail))) continue;
-    const sweepPosition = x / cols * .55 + (1 - y / rows) * .45;
+    const sourceX = (x - cols / 2) / zoom + foregroundRaster.cols / 2;
+    const sourceY = (y - rows / 2) / zoom + foregroundRaster.rows / 2;
+    const sweepPosition = sourceX / foregroundRaster.cols * .55 + (1 - sourceY / foregroundRaster.rows) * .45;
     const sweep = (assemblyTime - .95) / 1.05;
     const faceReveal = assembling ? smooth((sweep - sweepPosition) * 5) : 1;
     // Fixed spatial thresholds reveal characters without random flicker.
@@ -205,8 +271,20 @@ function draw() {
     batches[color].push([char, (i % cols + .5) * cellW, (Math.floor(i / cols) + .5) * cellH]);
   }
   for (let color = 0; color < batches.length; color++) {
-    ctx.fillStyle = palette[color];
+    ctx.fillStyle = colors[color];
     for (const [char, x, y] of batches[color]) ctx.fillText(char, x, y);
+  }
+}
+function draw() {
+  if (!foregroundRaster) return;
+  const assembling = assemblyTime < assemblyDuration;
+  // Both views share world geometry, orientation, lighting and assembly time.
+  const unfold = assembling ? .82 + .18 * smooth(assemblyTime / 1.2) : 1;
+  const points = projectOrientation(orientation, settings.depth, shape.vertices).map(p => p.map(v => v * unfold));
+  renderAscii(foregroundRaster, points, assembling);
+  if (backdropRaster) {
+    const zoom = Math.max(backdropWidth / width, backdropHeight / height) * 2.2;
+    renderAscii(backdropRaster, points, assembling, zoom);
   }
   canvas.dataset.seed = settings.seed;
   canvas.dataset.vertices = String(shape.vertices.length);
@@ -216,7 +294,8 @@ function draw() {
   canvas.dataset.angles = rotationPlanes.map(plane => (orientation[plane] * 180 / Math.PI).toFixed(1)).join(',');
   canvas.dataset.introTime = assemblyTime.toFixed(3);
   canvas.dataset.intro = !assembling ? 'complete' : assemblyTime < .3 ? 'vertices' : assemblyTime < 1.05 ? 'edges' : 'surfaces';
-  canvas.dataset.motion = paused || settings.speed === 0 ? 'paused' : document.hidden || !visible ? 'suspended' : 'running';
+  canvas.dataset.motion = paused || settings.speed === 0 ? 'paused' : document.hidden ? 'suspended' : 'running';
+  for (const key of ['seed', 'angles', 'intro', 'time']) backdrop.dataset[key] = canvas.dataset[key];
   syncControls();
 }
 function syncControls() {
@@ -241,12 +320,12 @@ function syncControls() {
 }
 function tick(now) {
   frame = 0;
-  if (document.hidden || (!visible && entrance.finished)) { previous = 0; return; }
+  if (document.hidden) { previous = 0; return; }
   const dt = previous ? Math.min((now - previous) / 1000, .1) : 0;
   previous = now; accumulator += dt;
   if (!entrance.finished) entrance.update(dt);
   const canAnimate = !activeControl && (!dragging || settings.followMouse);
-  if (visible && canAnimate) {
+  if (canAnimate) {
     if (!reduced.matches) assemblyTime = Math.min(assemblyDuration, assemblyTime + dt * assemblyTempo);
     if (!paused) {
       const delta = dt * rotationSpeed * settings.speed * smooth((assemblyTime - .5) / 1.3);
@@ -257,12 +336,12 @@ function tick(now) {
     }
   }
   const needsFinalFrame = assemblyTime >= assemblyDuration && canvas.dataset.intro !== 'complete';
-  if (visible && (accumulator >= 1 / 30 || needsFinalFrame)) { draw(); accumulator %= 1 / 30; }
-  if ((visible && canAnimate && ((!paused && settings.speed > 0) || assemblyTime < assemblyDuration)) || !entrance.finished) frame = requestAnimationFrame(tick);
+  if (accumulator >= 1 / 30 || needsFinalFrame) { draw(); accumulator %= 1 / 30; }
+  if ((canAnimate && ((!paused && settings.speed > 0) || assemblyTime < assemblyDuration)) || !entrance.finished) frame = requestAnimationFrame(tick);
   else previous = 0;
 }
 function start() {
-  if (!frame && !document.hidden && (visible || !entrance.finished)) frame = requestAnimationFrame(tick);
+  if (!frame && !document.hidden) frame = requestAnimationFrame(tick);
 }
 reduced.addEventListener('change', () => {
   paused = reduced.matches; assemblyTime = assemblyDuration;
@@ -371,7 +450,7 @@ window.addEventListener('pointermove', event => {
   lastMouse = { x: event.clientX, y: event.clientY };
   // Keep controls steady while editing, and avoid counting held drags twice.
   if (!settings.followMouse || !previousMouse || dragging || activeControl ||
-      event.buttons || drawer.contains(event.target) || !visible || document.hidden) return;
+      event.buttons || drawer.contains(event.target) || document.hidden) return;
   turnFromPointer(event.clientX - previousMouse.x, event.clientY - previousMouse.y, event.shiftKey);
   if (!frame) draw();
   start();
@@ -382,7 +461,8 @@ canvas.addEventListener('lostpointercapture', endDrag);
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
 new ResizeObserver(resize).observe(canvas);
-new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; previous = 0; start(); }).observe(scene);
-syncControls(); resize(); document.fonts.ready.then(resize); start();
+// The viewport-sized backdrop keeps the shared animation visible on every scroll position.
+new ResizeObserver(resizeBackdrop).observe(backdrop);
+syncControls(); resizeBackdrop(); resize(); document.fonts.ready.then(resize); start();
 // Name geometry, canvas sizes and entrance states are ready for the first paint.
 document.documentElement.classList.remove('is-loading');
