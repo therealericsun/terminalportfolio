@@ -7,9 +7,11 @@ export class AsciiFrame {
     this.element.setAttribute('aria-hidden', 'true');
     panel.append(this.element);
     const measure = document.createElement('canvas').getContext('2d');
-    measure.font = getComputedStyle(this.element).font;
-    const cellWidth = measure.measureText('-').width;
     this.resize = () => {
+      const typography = getComputedStyle(this.element);
+      measure.font = typography.font;
+      const cellWidth = measure.measureText('-').width;
+      const cellHeight = parseFloat(typography.lineHeight);
       const width = panel.clientWidth, height = panel.clientHeight;
       const columns = Math.max(2, Math.floor((width - 6) / cellWidth));
       const left = (width - columns * cellWidth) / 2;
@@ -31,37 +33,41 @@ export class AsciiFrame {
         span.style.setProperty('--glyph-phase', phase);
         return span;
       };
-      const horizontal = (y, edgeIndex, reverse = false) => {
+      // Trace inward from both ends, so all four corners launch together.
+      const fromEnds = progress => Math.min(progress, 1 - progress) * 2;
+      // Advance in discrete character batches instead of a continuous sweep.
+      const traceStep = (progress, travel) => Math.ceil(progress * travel / .045 - 1e-9) * .045;
+      const sidePhase = y => .09 + traceStep(fromEnds((y - top) / Math.max(1, bottom - top)), .36);
+      const horizontal = (y, startPhase = .09, travel = .36) => {
         const edge = document.createElement('div');
         edge.className = 'assembly-edge';
         for (let column = 1; column < columns; column++) {
-          const progress = (reverse ? columns - column : column) / columns;
-          edge.append(glyph('-', left + column * cellWidth, y, 'frame-glyph', .09 + edgeIndex * .045 + progress * .36));
+          const progress = fromEnds(column / columns);
+          edge.append(glyph('-', left + column * cellWidth, y, 'frame-glyph', startPhase + traceStep(progress, travel)));
         }
         fragment.append(edge);
       };
-      const vertical = (x, edgeIndex, reverse = false) => {
+      const vertical = x => {
         const edge = document.createElement('div');
         edge.className = 'assembly-edge';
         const stops = header ? [top, headerY, bottom] : [top, bottom];
         for (let section = 0; section < stops.length - 1; section++) {
           const start = stops[section], end = stops[section + 1];
-          const rows = header && section === 0 ? 2 : Math.max(1, Math.round((end - start) / 12));
+          const rows = header && section === 0 ? 2 : Math.max(1, Math.round((end - start) / cellHeight));
           for (let row = 1; row < rows; row++) {
             const y = start + (end - start) * row / rows;
-            const progress = (y - top) / Math.max(1, bottom - top);
-            edge.append(glyph('|', x, y, 'frame-glyph', .09 + edgeIndex * .045 + (reverse ? 1 - progress : progress) * .36));
+            edge.append(glyph('|', x, y, 'frame-glyph', sidePhase(y)));
           }
         }
         fragment.append(edge);
       };
-      horizontal(top, 0); vertical(right, 1, true);
-      horizontal(bottom, 2, true); vertical(left, 3);
-      if (header) horizontal(headerY, 4);
-      [[left, top], [right, top], [right, bottom], [left, bottom]].forEach(([x, y], i) => {
-        fragment.append(glyph('+', x, y, 'assembly-corner', i * .025));
+      horizontal(top); vertical(right);
+      horizontal(bottom); vertical(left);
+      if (header) horizontal(headerY, sidePhase(headerY), .18);
+      [[left, top], [right, top], [right, bottom], [left, bottom]].forEach(([x, y]) => {
+        fragment.append(glyph('+', x, y, 'assembly-corner', 0));
       });
-      if (header) fragment.append(glyph('+', left, headerY, 'frame-junction', .45), glyph('+', right, headerY, 'frame-junction', .45));
+      if (header) fragment.append(glyph('+', left, headerY, 'frame-junction', sidePhase(headerY)), glyph('+', right, headerY, 'frame-junction', sidePhase(headerY)));
       this.element.replaceChildren(fragment);
       for (const group of panel.querySelectorAll('.intro,.experience,.education-group,.skills,.orientation-diagram,.orientation-readout')) {
         const blocks = [...group.querySelectorAll('h1,h2,h3,p')];

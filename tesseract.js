@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, AsciiFrame } from './intro.js?v=ascii-frames-15';
+import { Entrance, AsciiFrame } from './intro.js?v=ascii-frames-21';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
