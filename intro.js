@@ -1,3 +1,6 @@
+// Keep canvas and CSS loading sequences on the same clock.
+export const loadingTimeScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--loading-time-scale')) || 1;
+
 // Use the same character frame for the settled window and its assembly.
 export class AsciiFrame {
   constructor(panel) {
@@ -87,6 +90,8 @@ export class AsciiFrame {
 
 export class Entrance {
   constructor(target, reduced = false, { duration = 1.95, delay = 0, temporary = false } = {}) {
+    duration *= loadingTimeScale;
+    delay *= loadingTimeScale;
     this.elapsed = 0;
     this.duration = duration + delay;
     this.temporary = temporary;
