@@ -44,6 +44,17 @@ export function projectOrientation(orientation, distance = 3.8, sourceVertices =
     return rotate(p, 1, 2, orientation.yz);
   });
 }
+// Rotated orthonormal 4-D basis. The facing component is the depth normal
+// of the combined 4D→3D→2D perspective, expressed in object coordinates.
+export function orientationAxes(orientation, distance = 5) {
+  return ['X', 'Y', 'Z', 'W'].map((label, axis) => {
+    let vector = [0, 0, 0, 0]; vector[axis] = 1;
+    for (const [a, b, angle] of [[0, 3, orientation.xw], [1, 3, orientation.yw], [2, 3, orientation.zw],
+      [0, 1, orientation.xy], [0, 2, orientation.xz], [1, 2, orientation.yz]]) vector = rotate(vector, a, b, angle);
+    const facing = (distance * vector[2] + 7.8 * vector[3]) / Math.hypot(distance, 7.8);
+    return { label, vector, facing };
+  });
+}
 const light = unit([-3, -4, 6]);
 export function illumination(normal, position, twoSided = false) {
   const eye = unit(sub([0, 0, 8], position));

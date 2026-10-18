@@ -12,14 +12,14 @@
     document.documentElement.classList.add('is-loading');
     window.addEventListener('error', () => document.documentElement.classList.remove('is-loading'));
   </script>
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./tesseract.js" onerror="document.documentElement.classList.remove('is-loading')"></script>
+  <link rel="stylesheet" href="./style.css?v=continuous-rotation-5">
+  <script type="module" src="./tesseract.js?v=continuous-rotation-5" onerror="document.documentElement.classList.remove('is-loading')"></script>
 </head>
 <body>
   <canvas id="render-backdrop" aria-hidden="true"></canvas>
   <main class="page">
     <div class="terminal-window portfolio-window">
-      <div class="window-titlebar" aria-hidden="true"><span class="window-prompt">&gt;_</span><span class="window-title">~/info</span><span class="window-chrome">─ □ ×</span></div>
+      <div class="window-titlebar" aria-hidden="true"><span class="window-title">~/info</span><span class="window-chrome">─ □ ×</span></div>
       <div class="terminal-body">
     <header class="intro">
       <div class="intro-main">
@@ -77,14 +77,15 @@
     </div>
     <figure id="tesseract-scene" aria-label="Animated ASCII 4D polytope">
       <canvas id="tesseract" role="img" aria-label="A shaded ASCII polytope rotating through four dimensions" aria-describedby="rotation-help"></canvas>
+      <div id="orientation-indicator" class="orientation-indicator" role="img" aria-label="Four-dimensional orientation indicator" hidden></div>
       <noscript><p class="scene-fallback">Enable JavaScript to see the rotating ASCII tesseract.</p></noscript>
     </figure>
     <footer>© 2026 Eric Sun</footer>
   </main>
   <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="4D renderer settings">
-    <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-prompt" aria-hidden="true">&gt;_</span><span class="window-title">~/render/settings</span><span class="drawer-hint" aria-hidden="true">open</span><span class="drawer-arrow" aria-hidden="true">↑</span></button>
+    <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-title">~/render/settings</span><span class="drawer-hint" aria-hidden="true">open</span><span class="drawer-arrow" aria-hidden="true">↑</span></button>
     <div id="drawer-content" class="controls-body drawer-content" inert aria-hidden="true">
-      <p id="rotation-help" class="sr-only">Follow mouse is enabled by default: move the mouse to rotate in XZ and YZ without holding a button. Disable it to use click-and-drag. Hold Shift to drag in XW and YW. The six angle sliders provide keyboard control of every rotation plane.</p>
+      <p id="rotation-help" class="sr-only">Follow mouse is enabled by default: move the mouse to rotate in XZ and YZ without holding a button. Disable it to use click-and-drag. Hold Shift to drag in XW and YW. Scroll vertically to fold through ZW or horizontally to turn YW. The corner indicator shows the projected X, Y, Z and W axes and facing direction. The six angle sliders provide keyboard control of every rotation plane.</p>
       <section class="rotation-section" aria-labelledby="rotation-heading">
       <div class="panel-heading"><span id="rotation-heading">rotation</span><div class="panel-actions"><button id="rotation-reset" type="button">reset</button></div></div>
       <div class="angle-controls" role="group" aria-label="Rotation planes">

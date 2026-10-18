@@ -1,4 +1,4 @@
-import { projectOrientation, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js';
+import { projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
 import { Entrance } from './intro.js';
@@ -37,6 +37,8 @@ const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(
 const initialSeed = randomSeed();
 const settings = { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed };
 let shape = generatePolytope(settings.seed);
+let shapeScale = framingScaleFor(shape.vertices);
+const updateOrientationIndicator = initOrientationIndicator();
 const seedInput = document.querySelector('#shape-seed');
 seedInput.value = settings.seed;
 const followMouseToggle = document.querySelector('#mouse-follow');
@@ -58,6 +60,94 @@ let assemblyTime = reduced.matches ? assemblyDuration : 0;
 let paused = reduced.matches, dragging = null;
 let backdropWidth = 0, backdropHeight = 0, backdropDensity = 1;
 let lastMouse = null, lastMouseMovement = -Infinity;
+let scrollTouch = null, scrollNeedsDraw = false;
+
+function framingScaleFor(vertices) {
+  const points = projectOrientation(initialOrientation(), 5, vertices).map(([x, y, z]) => {
+    const perspective = 7.8 / (7.8 - z);
+    return [x * perspective, y * perspective];
+  });
+  const span = Math.max(...[0, 1].map(axis => Math.max(...points.map(p => p[axis])) - Math.min(...points.map(p => p[axis]))));
+  // Match the substantial initial silhouette of seed 167s4wf (~2.95 units).
+  return clamp(2.95 / span, 1, 1.6);
+}
+function initOrientationIndicator() {
+  const indicator = document.querySelector('#orientation-indicator');
+  const axes = ['X', 'Y', 'Z', 'W'];
+  const colors = ['var(--accent)', 'var(--gold)', 'var(--text)', 'var(--cream)'];
+  indicator.innerHTML = `<div class="window-titlebar orientation-heading" aria-hidden="true"><span class="window-title">~/axis</span><span class="window-chrome">─ □ ×</span></div>
+    <svg viewBox="0 0 120 104" aria-hidden="true">
+      <circle cx="60" cy="51" r="31" fill="none" stroke="var(--rule)" stroke-dasharray="1 5" opacity=".4"/>
+      ${axes.map((axis, i) => `<g data-axis="${axis}" style="color:${colors[i]}">
+        <line class="orientation-axis orientation-negative" x1="60" y1="51"/>
+        <line class="orientation-axis ${axis === 'W' ? 'orientation-w' : ''}" x1="60" y1="51"/>
+        <rect width="3" height="3" fill="currentColor"/><text fill="currentColor">${axis}</text></g>`).join('')}
+      <rect x="58.5" y="49.5" width="3" height="3" fill="var(--cream)"/>
+    </svg><div class="orientation-readout">${axes.map((axis, i) => `<span style="color:${colors[i]}">${axis}<output data-facing="${axis}"></output></span>`).join('')}</div>`;
+  const nodes = axes.map(axis => {
+    const group = indicator.querySelector(`[data-axis="${axis}"]`);
+    return { group, lines: group.querySelectorAll('line'), tip: group.querySelector('rect'),
+      label: group.querySelector('text'), output: indicator.querySelector(`[data-facing="${axis}"]`) };
+  });
+  let entered = false;
+  const finishOpening = () => {
+    indicator.classList.remove('is-opening');
+    indicator.dataset.entrance = 'complete';
+  };
+  indicator.addEventListener('animationend', event => {
+    if (event.target === indicator) finishOpening();
+  });
+  reduced.addEventListener('change', () => { if (reduced.matches) finishOpening(); });
+  return () => {
+    const frame = orientationAxes(orientation, settings.depth);
+    const labels = [];
+    for (const [i, { vector, facing }] of frame.entries()) {
+      const { group, lines, tip, label, output } = nodes[i];
+      const project = sign => {
+        const perspective = 1 / (1 - sign * (vector[3] / settings.depth + vector[2] / 7.8));
+        return [60 + vector[0] * sign * perspective * 29, 51 - vector[1] * sign * perspective * 29];
+      };
+      const end = project(1), back = project(-1);
+      for (const [line, p] of [[lines[0], back], [lines[1], end]]) {
+        line.setAttribute('x2', p[0]); line.setAttribute('y2', p[1]);
+      }
+      tip.setAttribute('x', end[0] - 1.5); tip.setAttribute('y', end[1] - 1.5);
+      const length = Math.hypot(end[0] - 60, end[1] - 51);
+      const dx = length > 3 ? (end[0] - 60) / length : .7;
+      const dy = length > 3 ? (end[1] - 51) / length : .7;
+      labels.push({ node: label, x: end[0] + dx * 10, y: end[1] + dy * 10 });
+      group.setAttribute('opacity', .55 + .45 * (facing + 1) / 2);
+      output.value = `${facing < -.005 ? '−' : '+'}${Math.abs(facing).toFixed(2)}`;
+      group.dataset.facing = facing.toFixed(4);
+      group.dataset.vector = vector.map(v => v.toFixed(4)).join(',');
+    }
+    // Separate labels when two projected axes pass through the same direction.
+    for (let pass = 0; pass < 4; pass++) for (let a = 0; a < labels.length; a++) for (let b = a + 1; b < labels.length; b++) {
+      const dx = labels[b].x - labels[a].x, dy = labels[b].y - labels[a].y;
+      if (Math.abs(dx) < 11 && Math.abs(dy) < 12) {
+        const shift = (12 - Math.abs(dy)) / 2;
+        labels[a].y -= shift; labels[b].y += shift;
+      }
+    }
+    for (const label of labels) {
+      label.node.setAttribute('x', clamp(label.x, 8, 112));
+      label.node.setAttribute('y', clamp(label.y, 8, 96));
+    }
+    indicator.hidden = false;
+    indicator.classList.toggle('is-compact', height < 180);
+    if (!entered) {
+      entered = true;
+      if (reduced.matches) finishOpening();
+      else {
+        indicator.style.setProperty('--opening-offset', `${indicator.clientHeight / 2 - .5}px`);
+        indicator.classList.add('is-opening');
+        indicator.dataset.entrance = 'opening';
+      }
+    }
+    indicator.dataset.angles = canvas.dataset.angles;
+    indicator.setAttribute('aria-label', `Four-dimensional facing direction: ${frame.map(({ label, facing }) => `${label} ${facing.toFixed(2)}`).join(', ')}`);
+  };
+}
 
 function resize() {
   const bounds = canvas.getBoundingClientRect();
@@ -111,6 +201,7 @@ function resizeBackdrop() {
   draw();
 }
 function renderAscii(target, points, assembling, zoom = 1) {
+  const isBackdrop = target === backdropRaster;
   const { ctx, width, height, cols, rows, colors,
     edgeDepth, edgeLight, edgeGlyph, surfaceDepth, surfaceLight, surfaceHatch } = target;
   function putEdge(p, light, glyph = 0) {
@@ -159,7 +250,7 @@ function renderAscii(target, points, assembling, zoom = 1) {
   const scaleX = (cameraUnit[0] - cameraCenter[0]) * zoom;
   const scaleY = (cameraCenter[1] - cameraUnit[1]) * zoom;
   const project = p => {
-    if (zoom === 1) return camera(p, cols, rows, cellW / cellH, settings.depth);
+    if (!isBackdrop && zoom === 1) return camera(p, cols, rows, cellW / cellH, settings.depth);
     const perspective = 7.8 / (7.8 - p[2]);
     return [cols / 2 + p[0] * perspective * scaleX,
       rows / 2 - p[1] * perspective * scaleY, p[2]];
@@ -212,7 +303,7 @@ function renderAscii(target, points, assembling, zoom = 1) {
         if (distanceFromEnd > progress * .5) continue;
         const trace = assembling && progress < .99 && Math.abs(distanceFromEnd - progress * .5) < .022;
         const radius = .043 * edgeWidthScale * settings.edgeWidth;
-        if (zoom !== 1) {
+        if (isBackdrop) {
           putBackdropEdge(start[0] + delta[0] * fraction + normal[0] * radius,
             start[1] + delta[1] * fraction + normal[1] * radius,
             start[2] + delta[2] * fraction + normal[2] * radius, normal, diffuse, trace, direction);
@@ -280,11 +371,19 @@ function draw() {
   const assembling = assemblyTime < assemblyDuration;
   // Both views share world geometry, orientation, lighting and assembly time.
   const unfold = assembling ? .82 + .18 * smooth(assemblyTime / 1.2) : 1;
-  const points = projectOrientation(orientation, settings.depth, shape.vertices).map(p => p.map(v => v * unfold));
-  renderAscii(foregroundRaster, points, assembling);
+  const fullPoints = projectOrientation(orientation, settings.depth, shape.vertices);
+  // A fixed per-seed fit keeps compact objects substantial without breathing
+  // during rotation. Only the outer safety margin can limit that enlargement.
+  const screen = fullPoints.map(p => camera(p, cols, rows, cellW / cellH, settings.depth));
+  const extentX = Math.max(...screen.map(p => Math.abs(p[0] - cols / 2)));
+  const extentY = Math.max(...screen.map(p => Math.abs(p[1] - rows / 2)));
+  const fit = Math.min(shapeScale, cols * .44 / extentX, rows * .44 / extentY);
+  const points = fullPoints.map(p => p.map(v => v * unfold));
+  renderAscii(foregroundRaster, points, assembling, fit);
+  canvas.dataset.framing = fit.toFixed(3);
   if (backdropRaster) {
     const zoom = Math.max(backdropWidth / width, backdropHeight / height) * 2.2;
-    renderAscii(backdropRaster, points, assembling, zoom);
+    renderAscii(backdropRaster, points, assembling, zoom * fit);
   }
   canvas.dataset.seed = settings.seed;
   canvas.dataset.vertices = String(shape.vertices.length);
@@ -296,6 +395,7 @@ function draw() {
   canvas.dataset.intro = !assembling ? 'complete' : assemblyTime < .3 ? 'vertices' : assemblyTime < 1.05 ? 'edges' : 'surfaces';
   canvas.dataset.motion = paused || settings.speed === 0 ? 'paused' : document.hidden ? 'suspended' : 'running';
   for (const key of ['seed', 'angles', 'intro', 'time']) backdrop.dataset[key] = canvas.dataset[key];
+  updateOrientationIndicator();
   syncControls();
 }
 function syncControls() {
@@ -336,7 +436,9 @@ function tick(now) {
     }
   }
   const needsFinalFrame = assemblyTime >= assemblyDuration && canvas.dataset.intro !== 'complete';
-  if (accumulator >= 1 / 30 || needsFinalFrame) { draw(); accumulator %= 1 / 30; }
+  if (accumulator >= 1 / 30 || needsFinalFrame || scrollNeedsDraw) {
+    draw(); accumulator %= 1 / 30; scrollNeedsDraw = false;
+  }
   if ((canAnimate && ((!paused && settings.speed > 0) || assemblyTime < assemblyDuration)) || !entrance.finished) frame = requestAnimationFrame(tick);
   else previous = 0;
 }
@@ -347,7 +449,7 @@ reduced.addEventListener('change', () => {
   paused = reduced.matches; assemblyTime = assemblyDuration;
   entrance.finish(); finishDrawerEntrance(); draw(); start();
 });
-document.addEventListener('visibilitychange', () => { previous = 0; lastMouse = null; start(); });
+document.addEventListener('visibilitychange', () => { previous = 0; lastMouse = null; scrollTouch = null; start(); });
 function setDrawerOpen(open) {
   finishDrawerEntrance();
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
@@ -376,7 +478,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && drawer.classList.contains('is-open')) setDrawerOpen(false);
 });
 window.addEventListener('blur', () => {
-  activeControl = null; dragging = null; previous = 0; lastMouse = null;
+  activeControl = null; dragging = null; previous = 0; lastMouse = null; scrollTouch = null;
   canvas.classList.remove('is-dragging'); start();
 });
 for (const slider of sliders) {
@@ -407,7 +509,7 @@ autoRotateToggle.addEventListener('change', () => { paused = !autoRotateToggle.c
 document.querySelector('#rotation-reset').addEventListener('click', () => {
   Object.assign(orientation, initialOrientation());
   Object.assign(settings, { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed });
-  shape = generatePolytope(settings.seed); seedInput.value = settings.seed;
+  shape = generatePolytope(settings.seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = settings.seed;
   lastMouse = null; lastMouseMovement = -Infinity;
   time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
 });
@@ -416,7 +518,7 @@ document.querySelector('#shape-form').addEventListener('submit', event => {
   const requested = seedInput.value.trim();
   let seed = requested;
   if (!seed || seed === settings.seed) do { seed = randomSeed(); } while (seed === settings.seed);
-  settings.seed = seed; shape = generatePolytope(seed); seedInput.value = seed;
+  settings.seed = seed; shape = generatePolytope(seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = seed;
   assemblyTime = reduced.matches ? assemblyDuration : 0;
   draw(); start();
 });
@@ -455,6 +557,38 @@ window.addEventListener('pointermove', event => {
   if (!frame) draw();
   start();
 });
+// Wheel and touch scrolling turn planes involving W without taking over the
+// page's native scrolling, settings drawer, or browser pinch-to-zoom gesture.
+function turnFromScroll(dx, dy) {
+  if ((!dx && !dy) || activeControl || dragging || document.hidden) return;
+  assemblyTime = assemblyDuration;
+  // ZW trades visible depth for hidden depth: near/far layers pass through
+  // one another rather than sweeping the silhouette sideways like XW.
+  orientation.zw = wrapAngle(orientation.zw + clamp(dy, -240, 240) * .0035);
+  orientation.yw = wrapAngle(orientation.yw + clamp(dx, -240, 240) * .0024);
+  scrollNeedsDraw = true;
+  start();
+}
+window.addEventListener('wheel', event => {
+  if (event.defaultPrevented || event.ctrlKey || event.metaKey || drawer.contains(event.target)) return;
+  const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+  turnFromScroll(event.deltaX * unit, event.deltaY * unit);
+}, { passive: true });
+window.addEventListener('touchstart', event => {
+  scrollTouch = event.touches.length === 1 && !drawer.contains(event.target)
+    ? { id: event.touches[0].identifier, x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
+}, { passive: true });
+window.addEventListener('touchmove', event => {
+  if (!scrollTouch || event.touches.length !== 1 || event.defaultPrevented) return;
+  const touch = event.touches[0];
+  if (touch.identifier !== scrollTouch.id) return;
+  const dx = scrollTouch.x - touch.clientX, dy = scrollTouch.y - touch.clientY;
+  scrollTouch = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
+  turnFromScroll(dx, dy);
+}, { passive: true });
+for (const type of ['touchend', 'touchcancel']) {
+  window.addEventListener(type, () => { scrollTouch = null; }, { passive: true });
+}
 window.addEventListener('pointerout', event => { if (!event.relatedTarget) lastMouse = null; });
 function endDrag() { dragging = null; canvas.classList.remove('is-dragging'); start(); }
 canvas.addEventListener('lostpointercapture', endDrag);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vertices, edges, faces, rotate, projectVertices, camera, illumination, rotationPlanes, initialOrientation, advanceOrientation, projectOrientation } from '../tesseract-math.js';
+import { vertices, edges, faces, rotate, projectVertices, camera, illumination, rotationPlanes, initialOrientation, advanceOrientation, projectOrientation, orientationAxes } from '../tesseract-math.js';
 
 test('tesseract topology has 16 vertices, 32 edges and 24 square faces', () => {
   assert.equal(new Set(vertices.map(v => v.join(','))).size, 16);
@@ -84,4 +84,26 @@ test('four-dimensional spin can continue without changing pointer-controlled spa
   advanceOrientation(orientation, 1, ['xw', 'yw', 'zw']);
   for (const plane of ['xy', 'xz', 'yz']) assert.equal(orientation[plane], before[plane]);
   for (const plane of ['xw', 'yw', 'zw']) assert.ok(orientation[plane] > before[plane]);
+});
+
+
+test('orientation indicator basis stays orthonormal and matches the renderer perspective', () => {
+  for (let turn = 0; turn < 40; turn++) {
+    const orientation = Object.fromEntries(rotationPlanes.map((plane, i) => [plane, turn * (i + 1) * .31]));
+    for (const distance of [3, 5, 7]) {
+      const axes = orientationAxes(orientation, distance);
+      assert.ok(Math.abs(axes.reduce((sum, axis) => sum + axis.facing ** 2, 0) - 1) < 1e-12, 'unit facing direction');
+      for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) {
+        const product = axes[a].vector.reduce((sum, v, i) => sum + v * axes[b].vector[i], 0);
+        assert.ok(Math.abs(product - Number(a === b)) < 1e-12, 'orthonormal 4D axes');
+      }
+      for (const [axis, { vector }] of axes.entries()) for (const sign of [-1, 1]) {
+        const basis = [0, 0, 0, 0]; basis[axis] = sign;
+        const p = projectOrientation(orientation, distance, [basis])[0];
+        const screen = [p[0] * 7.8 / (7.8 - p[2]), p[1] * 7.8 / (7.8 - p[2])];
+        const denominator = 1 - sign * (vector[3] / distance + vector[2] / 7.8);
+        for (let i = 0; i < 2; i++) assert.ok(Math.abs(screen[i] - sign * vector[i] / denominator) < 1e-12, 'same combined perspective');
+      }
+    }
+  }
 });
