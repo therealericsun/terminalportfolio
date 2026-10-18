@@ -1,4 +1,4 @@
-import { projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
+import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
 import { Entrance } from './intro.js';
@@ -34,9 +34,11 @@ const rotationSpeed = 4;
 const edgeWidthScale = .7;
 const orientation = initialOrientation();
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
-const initialSeed = randomSeed();
+const initialSeed = 'tesseract';
+const tesseractShape = { vertices: tesseractVertices, edges: tesseractEdges, faces: tesseractFaces };
+const shapeForSeed = seed => seed.toLowerCase() === 'tesseract' ? tesseractShape : generatePolytope(seed);
 const settings = { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed };
-let shape = generatePolytope(settings.seed);
+let shape = shapeForSeed(settings.seed);
 let shapeScale = framingScaleFor(shape.vertices);
 const updateOrientationIndicator = initOrientationIndicator();
 const seedInput = document.querySelector('#shape-seed');
@@ -278,7 +280,13 @@ function renderAscii(target, points, assembling, zoom = 1) {
     const normal = unit(cross(sub(p[1], p[0]), sub(p[2], p[0])));
     const center = p[0].map((_, axis) => p.reduce((sum, v) => sum + v[axis], 0) / p.length);
     const light = illumination(normal, center, true);
-    triangle(face.map(i => projected[i]), [[0, 0], [1, 0], [.5, 1]], light);
+    // Triangulate square tesseract faces with continuous texture coordinates;
+    // the diagonal belongs to the surface, not the visible edge structure.
+    const uv = face.length === 4 ? [[0, 0], [1, 0], [1, 1], [0, 1]] : [[0, 0], [1, 0], [.5, 1]];
+    for (let i = 1; i < face.length - 1; i++) {
+      const corners = [0, i, i + 1];
+      triangle(corners.map(j => projected[face[j]]), corners.map(j => uv[j]), light);
+    }
   }
   // Cylindrical struts: radial normals drive Lambert diffuse + Blinn specular.
   // Every sample has actual 3-D depth; crossings do not depend on draw order.
@@ -385,6 +393,12 @@ function draw() {
     const zoom = Math.max(backdropWidth / width, backdropHeight / height) * 2.2;
     renderAscii(backdropRaster, points, assembling, zoom * fit);
   }
+  const kind = shape === tesseractShape ? 'tesseract' : 'polytope';
+  if (canvas.dataset.shape !== kind) {
+    canvas.dataset.shape = kind;
+    canvas.setAttribute('aria-label', `A shaded ASCII ${kind} rotating through four dimensions`);
+    scene.setAttribute('aria-label', `Animated ASCII 4D ${kind}`);
+  }
   canvas.dataset.seed = settings.seed;
   canvas.dataset.vertices = String(shape.vertices.length);
   canvas.dataset.edges = String(shape.edges.length);
@@ -394,7 +408,7 @@ function draw() {
   canvas.dataset.introTime = assemblyTime.toFixed(3);
   canvas.dataset.intro = !assembling ? 'complete' : assemblyTime < .3 ? 'vertices' : assemblyTime < 1.05 ? 'edges' : 'surfaces';
   canvas.dataset.motion = paused || settings.speed === 0 ? 'paused' : document.hidden ? 'suspended' : 'running';
-  for (const key of ['seed', 'angles', 'intro', 'time']) backdrop.dataset[key] = canvas.dataset[key];
+  for (const key of ['seed', 'shape', 'angles', 'intro', 'time']) backdrop.dataset[key] = canvas.dataset[key];
   updateOrientationIndicator();
   syncControls();
 }
@@ -509,7 +523,7 @@ autoRotateToggle.addEventListener('change', () => { paused = !autoRotateToggle.c
 document.querySelector('#rotation-reset').addEventListener('click', () => {
   Object.assign(orientation, initialOrientation());
   Object.assign(settings, { speed: 1, depth: 5, detail: .5, edgeWidth: 1, followMouse: true, seed: initialSeed });
-  shape = generatePolytope(settings.seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = settings.seed;
+  shape = shapeForSeed(settings.seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = settings.seed;
   lastMouse = null; lastMouseMovement = -Infinity;
   time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
 });
@@ -518,7 +532,7 @@ document.querySelector('#shape-form').addEventListener('submit', event => {
   const requested = seedInput.value.trim();
   let seed = requested;
   if (!seed || seed === settings.seed) do { seed = randomSeed(); } while (seed === settings.seed);
-  settings.seed = seed; shape = generatePolytope(seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = seed;
+  settings.seed = seed; shape = shapeForSeed(seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = seed;
   assemblyTime = reduced.matches ? assemblyDuration : 0;
   draw(); start();
 });

@@ -12,8 +12,8 @@
     document.documentElement.classList.add('is-loading');
     window.addEventListener('error', () => document.documentElement.classList.remove('is-loading'));
   </script>
-  <link rel="stylesheet" href="./style.css?v=continuous-rotation-5">
-  <script type="module" src="./tesseract.js?v=continuous-rotation-5" onerror="document.documentElement.classList.remove('is-loading')"></script>
+  <link rel="stylesheet" href="./style.css?v=tesseract-default-6">
+  <script type="module" src="./tesseract.js?v=tesseract-default-6" onerror="document.documentElement.classList.remove('is-loading')"></script>
 </head>
 <body>
   <canvas id="render-backdrop" aria-hidden="true"></canvas>
@@ -75,8 +75,8 @@
     </div>
       </div>
     </div>
-    <figure id="tesseract-scene" aria-label="Animated ASCII 4D polytope">
-      <canvas id="tesseract" role="img" aria-label="A shaded ASCII polytope rotating through four dimensions" aria-describedby="rotation-help"></canvas>
+    <figure id="tesseract-scene" aria-label="Animated ASCII 4D tesseract">
+      <canvas id="tesseract" role="img" aria-label="A shaded ASCII tesseract rotating through four dimensions" aria-describedby="rotation-help"></canvas>
       <div id="orientation-indicator" class="orientation-indicator" role="img" aria-label="Four-dimensional orientation indicator" hidden></div>
       <noscript><p class="scene-fallback">Enable JavaScript to see the rotating ASCII tesseract.</p></noscript>
     </figure>
@@ -111,8 +111,8 @@
         <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">50%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="50" aria-label="Face texture amount"></label>
         <label class="setting" for="edge-width"><span class="setting-heading"><span>edge width</span><output id="value-edge-width" for="edge-width">1.0×</output></span><input id="edge-width" type="range" min="0.5" max="1.5" step="0.1" value="1" aria-label="Edge width"></label>
         <form id="shape-form" class="seed-control">
-          <label for="shape-seed">random seed</label>
-          <div class="seed-row"><input id="shape-seed" type="text" value="" maxlength="64" autocomplete="off" spellcheck="false" aria-description="Enter a seed to reproduce a shape. Regenerate rolls a new seed when the current seed is unchanged."><button type="submit">regenerate</button></div>
+          <label for="shape-seed">shape / seed</label>
+          <div class="seed-row"><input id="shape-seed" type="text" value="" maxlength="64" autocomplete="off" spellcheck="false" aria-description="Enter tesseract for the default shape or a seed to reproduce a generated shape. Regenerate rolls a new seed when the current value is unchanged."><button type="submit">regenerate</button></div>
         </form>
         </div>
       </section>
