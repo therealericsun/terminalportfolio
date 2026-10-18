@@ -1,44 +1,102 @@
-// Assemble a terminal frame while preserving the panel's final layout.
-// CSS draws the frame; focus, reduced motion and the render clock can finish it.
+// Use the same character frame for the settled window and its assembly.
+export class AsciiFrame {
+  constructor(panel) {
+    this.panel = panel;
+    this.element = document.createElement('div');
+    this.element.className = 'ascii-frame';
+    this.element.setAttribute('aria-hidden', 'true');
+    panel.append(this.element);
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = getComputedStyle(this.element).font;
+    const cellWidth = measure.measureText('-').width;
+    this.resize = () => {
+      const width = panel.clientWidth, height = panel.clientHeight;
+      const columns = Math.max(2, Math.floor((width - 6) / cellWidth));
+      const left = (width - columns * cellWidth) / 2;
+      const right = width - left, top = 4;
+      const bottom = Math.max(top, panel.matches('.drawer-toggle') ? panel.offsetHeight : height - 4);
+      const titlebar = panel.querySelector('.window-titlebar');
+      const header = titlebar?.offsetHeight ? titlebar : null;
+      const headerY = header ? Math.min(bottom, header.offsetHeight) : null;
+      panel.style.setProperty('--frame-left', `${left}px`);
+      panel.style.setProperty('--frame-cell', `${cellWidth}px`);
+      panel.style.setProperty('--frame-title-y', `${(top + (headerY ?? bottom)) / 2}px`);
+      const fragment = document.createDocumentFragment();
+      const glyph = (text, x, y, className, phase) => {
+        const span = document.createElement('span');
+        span.className = className;
+        span.textContent = text;
+        span.style.left = `${x}px`; span.style.top = `${y}px`;
+        span.style.width = `${cellWidth}px`;
+        span.style.setProperty('--glyph-phase', phase);
+        return span;
+      };
+      const horizontal = (y, edgeIndex, reverse = false) => {
+        const edge = document.createElement('div');
+        edge.className = 'assembly-edge';
+        for (let column = 1; column < columns; column++) {
+          const progress = (reverse ? columns - column : column) / columns;
+          edge.append(glyph('-', left + column * cellWidth, y, 'frame-glyph', .09 + edgeIndex * .045 + progress * .36));
+        }
+        fragment.append(edge);
+      };
+      const vertical = (x, edgeIndex, reverse = false) => {
+        const edge = document.createElement('div');
+        edge.className = 'assembly-edge';
+        const stops = header ? [top, headerY, bottom] : [top, bottom];
+        for (let section = 0; section < stops.length - 1; section++) {
+          const start = stops[section], end = stops[section + 1];
+          const rows = header && section === 0 ? 2 : Math.max(1, Math.round((end - start) / 12));
+          for (let row = 1; row < rows; row++) {
+            const y = start + (end - start) * row / rows;
+            const progress = (y - top) / Math.max(1, bottom - top);
+            edge.append(glyph('|', x, y, 'frame-glyph', .09 + edgeIndex * .045 + (reverse ? 1 - progress : progress) * .36));
+          }
+        }
+        fragment.append(edge);
+      };
+      horizontal(top, 0); vertical(right, 1, true);
+      horizontal(bottom, 2, true); vertical(left, 3);
+      if (header) horizontal(headerY, 4);
+      [[left, top], [right, top], [right, bottom], [left, bottom]].forEach(([x, y], i) => {
+        fragment.append(glyph('+', x, y, 'assembly-corner', i * .025));
+      });
+      if (header) fragment.append(glyph('+', left, headerY, 'frame-junction', .45), glyph('+', right, headerY, 'frame-junction', .45));
+      this.element.replaceChildren(fragment);
+      for (const group of panel.querySelectorAll('.intro,.experience,.education-group,.skills,.orientation-diagram,.orientation-readout')) {
+        const blocks = [...group.querySelectorAll('h1,h2,h3,p')];
+        if (!blocks.length) blocks.push(group);
+        blocks.forEach((block, i) => {
+          block.classList.add('terminal-reveal');
+          block.style.setProperty('--text-phase', blocks.length > 1 ? i / (blocks.length - 1) * .24 : 0);
+        });
+      }
+    };
+    this.resize();
+    this.observer = new ResizeObserver(this.resize);
+    this.observer.observe(panel);
+  }
+  remove() { this.observer.disconnect(); this.element.remove(); }
+}
+
 export class Entrance {
-  constructor(target, reduced = false, { duration = 1.95, delay = 0 } = {}) {
+  constructor(target, reduced = false, { duration = 1.95, delay = 0, temporary = false } = {}) {
     this.elapsed = 0;
     this.duration = duration + delay;
+    this.temporary = temporary;
     this.finished = false;
     this.panel = target?.matches('.portfolio-window,.orientation-indicator,.drawer-toggle') ? target : target?.querySelector('.portfolio-window');
     this.onFocus = () => this.finish();
     this.onAnimationEnd = event => {
       if (event.target === this.panel && event.animationName === 'wireframe-shell') this.finish();
     };
-    if (!this.panel || reduced) { this.finish(); return; }
+    if (!this.panel) { this.finish(); return; }
+    this.ascii = new AsciiFrame(this.panel);
+    this.frame = this.ascii.element;
+    if (reduced) { this.finish(); return; }
     this.panel.style.setProperty('--assembly-duration', `${duration}s`);
     this.panel.style.setProperty('--assembly-delay', `${delay}s`);
-    this.panel.style.setProperty('--assembly-border', getComputedStyle(this.panel).borderColor);
-    this.frame = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.frame.classList.add('assembly-frame');
-    this.frame.setAttribute('aria-hidden', 'true');
-    const edgeCount = this.panel.matches('.drawer-toggle') ? 4 : 5;
-    this.frame.innerHTML = Array.from({ length: edgeCount }, (_, i) => `<path class="assembly-edge" pathLength="1" style="--trace-phase:${i * .055}"/>`).join('')
-      + [0, 1, 2, 3].map(i => `<path class="assembly-corner" style="--spark-phase:${i * .025}"/>`).join('');
-    this.panel.append(this.frame);
-    const resize = () => {
-      const bounds = this.panel.getBoundingClientRect(), style = getComputedStyle(this.panel);
-      const width = bounds.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
-      const height = bounds.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth);
-      this.frame.setAttribute('viewBox', `0 0 ${width} ${height}`);
-      const x = width - .5, y = height - .5;
-      const headerHeight = this.panel.querySelector('.window-titlebar')?.getBoundingClientRect().height || 0;
-      const paths = [`M.5 .5H${x}`, `M${x} ${y}V.5`, `M${x} ${y}H.5`, `M.5 .5V${y}`, `M.5 ${headerHeight}H${x}`];
-      this.frame.querySelectorAll('.assembly-edge').forEach((path, i) => path.setAttribute('d', paths[i]));
-      const corners = [[.5, .5], [x, .5], [x, y], [.5, y]];
-      this.frame.querySelectorAll('.assembly-corner').forEach((marker, i) => {
-        const [cx, cy] = corners[i];
-        marker.setAttribute('d', `M${cx - 3} ${cy}h6M${cx} ${cy - 3}v6`);
-      });
-    };
-    resize();
-    this.observer = new ResizeObserver(resize);
-    this.observer.observe(this.panel);
     this.panel.classList.add('is-assembling');
     this.panel.dataset.entrance = 'opening';
     this.panel.addEventListener('focusin', this.onFocus, { once: true });
@@ -50,8 +108,8 @@ export class Entrance {
   }
   finish() {
     this.finished = true;
-    this.observer?.disconnect();
-    this.frame?.remove();
+    if (this.temporary) this.ascii?.remove();
+    else this.frame?.classList.remove('assembly-frame');
     this.panel?.classList.remove('is-assembling');
     this.panel?.setAttribute('data-entrance', 'complete');
     this.panel?.removeEventListener('focusin', this.onFocus);

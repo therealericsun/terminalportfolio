@@ -50,9 +50,8 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--gold); outline-
 footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; color: var(--faint); }
 
 .terminal-window { border: 1px solid color-mix(in srgb,var(--rule) 72%,var(--bg)); border-radius: 0; background: var(--window-bg); overflow: hidden; }
-.window-titlebar { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); background: var(--window-titlebar-bg); font-size: 10px; line-height: 1; color: var(--faint); user-select: none; }
+.window-titlebar { position:relative; display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); background: var(--window-titlebar-bg); font-size: 10px; line-height: 1; color: var(--faint); user-select: none; }
 .window-title { color:var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.window-chrome { color: var(--rule); letter-spacing: .18em; white-space: nowrap; }
 .terminal-body { padding: 20px 18px 16px; }
 .ascii-name { display: block; width: 100%; max-width: 620px; color: var(--accent); }
 #ascii-name-canvas { display: block; width: 100%; height: clamp(84px,8vw,108px); }
@@ -197,12 +196,23 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 /* Corner sparks and traced edges assemble the same frame as the 4-D scene. */
 .portfolio-window { position:relative; }
 .is-assembling { overflow:visible; animation:wireframe-shell var(--assembly-duration) linear var(--assembly-delay) both; }
-.is-assembling>.assembly-frame { position:absolute; z-index:3; top:0; left:0; width:100%; height:100%; overflow:visible; pointer-events:none; animation:wireframe-finish var(--assembly-duration) linear var(--assembly-delay) both; }
-.assembly-edge { fill:none; stroke:var(--gold); stroke-width:1; stroke-dasharray:1; stroke-dashoffset:1; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 2px #ffd16e55); animation:wireframe-edge calc(var(--assembly-duration) * .48) cubic-bezier(.25,.6,.2,1) calc(var(--assembly-delay) + var(--assembly-duration) * (.09 + var(--trace-phase))) both; }
-.assembly-corner { fill:none; stroke:var(--cream); stroke-width:1; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 3px #ffd16e99); animation:wireframe-corner calc(var(--assembly-duration) * .75) ease-out calc(var(--assembly-delay) + var(--assembly-duration) * var(--spark-phase)) both; }
-.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>:is(.window-title,.window-chrome) { animation:wireframe-content calc(var(--assembly-duration) * .24) ease-out calc(var(--assembly-delay) + var(--assembly-duration) * .35) both; }
-.portfolio-window.is-assembling :is(.intro,.experience,.education-group,.skills),.orientation-indicator.is-assembling :is(.orientation-diagram,.orientation-readout) {
-  animation:wireframe-content calc(var(--assembly-duration) * .26) ease-out calc(var(--assembly-delay) + var(--assembly-duration) * var(--content-phase,.46)) both;
+:is(.terminal-window,.orientation-indicator):has(>.ascii-frame) { border-color:transparent; }
+:is(.terminal-window,.orientation-indicator):has(>.ascii-frame)>.window-titlebar { border-bottom-color:transparent; }
+/* Put the title on the same text row and character columns as the frame. */
+:is(.terminal-window,.orientation-indicator):has(>.ascii-frame)>.window-titlebar>.window-title {
+  position:absolute; left:calc(var(--frame-left) + 2 * var(--frame-cell)); right:calc(var(--frame-left) + 2 * var(--frame-cell));
+  top:var(--frame-title-y); transform:translateY(-50%); height:12px;
+  font:10px/12px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  letter-spacing:0;
+}
+.ascii-frame { position:absolute; z-index:3; inset:0; pointer-events:none; color:var(--rule); font:10px/1 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; user-select:none; }
+.ascii-frame span { position:absolute; display:flex; align-items:center; justify-content:center; height:12px; line-height:12px; transform:translate(-50%,-50%); }
+.assembly-edge { position:absolute; inset:0; }
+.assembly-frame span { animation:wireframe-glyph calc(var(--assembly-duration) * .08) steps(1,end) calc(var(--assembly-delay) + var(--assembly-duration) * var(--glyph-phase,0)) both; }
+.settings-drawer:has(.drawer-toggle.is-assembling)>.ascii-frame { visibility:hidden; }
+.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>.window-title { animation:terminal-header .01s steps(1,end) calc(var(--assembly-delay) + var(--assembly-duration) * .35) both; }
+.is-assembling .terminal-reveal {
+  animation:terminal-header .01s steps(1,end) calc(var(--assembly-delay) + var(--assembly-duration) * (var(--content-phase,.46) + var(--text-phase,0))) both;
 }
 .portfolio-window.is-assembling .intro { --content-phase:.43; }
 .portfolio-window.is-assembling .experience { --content-phase:.52; }
@@ -210,27 +220,15 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: 10px; 
 .portfolio-window.is-assembling .skills { --content-phase:.64; }
 .orientation-indicator.is-assembling .orientation-readout { --content-phase:.56; }
 @keyframes wireframe-shell {
-  0%,32% { background:transparent; border-color:transparent; }
-  62% { background:var(--window-bg); border-color:transparent; }
-  82%,100% { background:var(--window-bg); border-color:var(--assembly-border); }
+  0%,34.99% { background:transparent; border-color:transparent; }
+  35%,100% { background:var(--window-bg); border-color:transparent; }
 }
-@keyframes wireframe-edge {
-  0% { stroke-dashoffset:1; stroke:var(--cream); }
-  55% { stroke:var(--gold); }
-  100% { stroke-dashoffset:0; stroke:var(--accent); }
-}
-@keyframes wireframe-corner {
-  0% { opacity:0; }
-  12%,36% { opacity:1; stroke:var(--cream); }
-  65% { opacity:.65; stroke:var(--gold); }
-  100% { opacity:0; stroke:var(--accent); }
-}
-@keyframes wireframe-finish { 0%,74% { opacity:1; } 100% { opacity:0; } }
-@keyframes wireframe-content { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+@keyframes wireframe-glyph { from { visibility:hidden; } to { visibility:visible; } }
+@keyframes terminal-header { from { clip-path:inset(0 0 100% 0); } to { clip-path:inset(0); } }
 /* Trace the whole visible settings frame as it rises into view. */
 .drawer-toggle { position:relative; }
 .settings-drawer.is-entering { overflow:visible; }
 @media(prefers-reduced-motion:reduce) {
-  .is-assembling,.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>:is(.window-title,.window-chrome),.portfolio-window.is-assembling :is(.intro,.experience,.education-group,.skills),.orientation-indicator.is-assembling :is(.orientation-diagram,.orientation-readout) { animation:none; }
-  .assembly-frame { display:none; }
+  .is-assembling,.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>.window-title,.is-assembling .terminal-reveal { animation:none; }
+  .assembly-frame,.assembly-frame span { animation:none; }
 }

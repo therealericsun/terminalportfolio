@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance } from './intro.js?v=wireframe-12';
+import { Entrance, AsciiFrame } from './intro.js?v=ascii-frames-15';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -49,7 +49,8 @@ const followMouseToggle = document.querySelector('#mouse-follow');
 const extraPlanes = ['xw', 'yw', 'zw'];
 const drawer = document.querySelector('#settings-drawer');
 const drawerToggle = document.querySelector('#drawer-toggle');
-const drawerEntrance = new Entrance(drawerToggle, reduced.matches, { duration: 1.3, delay: .45 });
+new AsciiFrame(drawer);
+const drawerEntrance = new Entrance(drawerToggle, reduced.matches, { duration: 1.3, delay: .45, temporary: true });
 const finishDrawerEntrance = () => {
   drawer.classList.remove('is-entering');
   drawerEntrance.finish();
@@ -69,7 +70,7 @@ let time = 0, frame = 0, previous = 0, accumulator = 0, activeControl = null;
 let assemblyTime = reduced.matches ? assemblyDuration : 0;
 let paused = reduced.matches, dragging = null;
 let motionReduced = reduced.matches;
-let drawerOpenedByHover = false, hoverCloseTimer = 0;
+let keyboardNavigation = false, hoverCloseTimer = 0;
 let backdropWidth = 0, backdropHeight = 0, backdropDensity = 1;
 let lastMouse = null, lastMouseMovement = -Infinity;
 let scrollTouch = null, scrollNeedsDraw = false;
@@ -87,7 +88,7 @@ function initOrientationIndicator() {
   const indicator = document.querySelector('#orientation-indicator');
   const axes = ['X', 'Y', 'Z', 'W'];
   const colors = ['var(--accent)', 'var(--gold)', 'var(--text)', 'var(--cream)'];
-  indicator.innerHTML = `<div class="window-titlebar orientation-heading" aria-hidden="true"><span class="window-title">~/axis</span><span class="window-chrome">─ □ ×</span></div>
+  indicator.innerHTML = `<div class="window-titlebar orientation-heading" aria-hidden="true"><span class="window-title">~/axis</span></div>
     <svg class="orientation-diagram" viewBox="0 0 120 104" aria-hidden="true">
       <circle cx="60" cy="51" r="31" fill="none" stroke="var(--rule)" stroke-dasharray="1 5" opacity=".4"/>
       ${axes.map((axis, i) => `<g data-axis="${axis}" style="color:${colors[i]}">
@@ -464,9 +465,8 @@ function applyMotionPreference() {
 }
 reduced.addEventListener('change', () => { applyMotionPreference(); draw(); start(); });
 document.addEventListener('visibilitychange', () => { previous = 0; lastMouse = null; scrollTouch = null; start(); });
-function setDrawerOpen(open, fromHover = false) {
+function setDrawerOpen(open) {
   clearTimeout(hoverCloseTimer);
-  drawerOpenedByHover = open && fromHover;
   finishDrawerEntrance();
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
   drawer.classList.toggle('is-open', open);
@@ -491,23 +491,27 @@ new ResizeObserver(() => {
 const canHover = matchMedia('(hover: hover) and (pointer: fine)');
 function closeAfterHover() {
   clearTimeout(hoverCloseTimer);
-  if (!drawerOpenedByHover) return;
+  if (!canHover.matches || !drawer.classList.contains('is-open')) return;
   hoverCloseTimer = setTimeout(() => {
-    if (!drawer.matches(':hover') && !drawer.contains(document.activeElement)) setDrawerOpen(false);
+    if (!drawer.matches(':hover') && !activeControl && !(keyboardNavigation && drawer.contains(document.activeElement))) setDrawerOpen(false);
   }, 180);
 }
 drawer.addEventListener('pointerenter', event => {
   if (event.pointerType !== 'mouse' || !canHover.matches) return;
   clearTimeout(hoverCloseTimer);
-  if (!drawer.classList.contains('is-open')) setDrawerOpen(true, true);
+  if (!drawer.classList.contains('is-open')) setDrawerOpen(true);
 });
 drawer.addEventListener('pointerleave', closeAfterHover);
 drawer.addEventListener('focusout', closeAfterHover);
 drawerToggle.addEventListener('click', () => {
-  if (drawerOpenedByHover) { clearTimeout(hoverCloseTimer); drawerOpenedByHover = false; }
+  // A mouse click keeps the hovered drawer usable without pinning it open.
+  if (canHover.matches && !keyboardNavigation && drawer.matches(':hover')) setDrawerOpen(true);
   else setDrawerOpen(!drawer.classList.contains('is-open'));
 });
+document.addEventListener('pointerdown', () => { keyboardNavigation = false; }, true);
+document.addEventListener('pointerup', closeAfterHover);
 document.addEventListener('keydown', event => {
+  if (event.key === 'Tab') keyboardNavigation = true;
   if (event.key === 'Escape' && drawer.classList.contains('is-open')) setDrawerOpen(false);
 });
 window.addEventListener('blur', () => {
