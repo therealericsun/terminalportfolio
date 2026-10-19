@@ -1,4 +1,4 @@
-import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.5';
+import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.6';
 
 const checkbox = document.querySelector('#crt-effect');
 const displayControls = [...document.querySelectorAll('input[data-crt-option]')];
