@@ -4,8 +4,9 @@ Plain HTML, CSS and JavaScript. Page assets live in `public/tesseract/assets/`. 
 
 - Drag the shape, follow the pointer, or use the settings drawer to change rotation, speed, perspective and shading.
 - Enter a seed to reproduce a shape; `tesseract` restores the default.
-- The CRT toggle persists locally. Reduced motion skips the startup and freezes animation.
+- CRT defaults off in the mobile layout (900px and narrower); a saved toggle preference takes priority. Reduced motion skips the startup and freezes animation.
 - `tesseract.js` renders the scene, `tesseract-math.js` handles projection, and `polytope.js` generates seeded shapes.
+- Startup opens the screen smoothly, waits one second, traces each frame, then pauses 220ms before revealing its text.
 - `crt-init.js` applies the vendored CRT library independently of the renderer.
 
 Run `npm run check`, `npm test`, and `npm run build` before publishing. Update the CRT distribution with `npm run sync:crt` after building the sibling library.

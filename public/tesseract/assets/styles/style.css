@@ -245,21 +245,17 @@ body.crt-disabled #crt-screen { inset:0; clip-path:none; border-radius:0; box-sh
 html.crt-booting #crt-startup { visibility:hidden; }
 html.crt-powering #crt-startup {
   visibility:visible; will-change:transform;
-  animation:screen-power-on 1.1s linear both;
+  animation:screen-power-on 1.35s cubic-bezier(.4,0,.2,1) both;
 }
 #crt-power { display:none; position:fixed; z-index:2147483645; inset:0; background:#000; pointer-events:none; }
 html.crt-booting #crt-power { display:block; }
 html.crt-powering #crt-power { background:transparent; }
 #crt-power::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:0; }
 #crt-power::after { width:90%; height:85%; background:radial-gradient(ellipse,#de9b4218,transparent 65%); }
-html.crt-powering #crt-power::after { animation:screen-start-bloom 1.1s linear both; }
+html.crt-powering #crt-power::after { animation:screen-start-bloom 1.35s ease-in-out both; }
 @keyframes screen-power-on {
   0% { transform:scale(.48,.001); }
-  17% { transform:scale(.96,.003); }
-  25% { transform:scale(.985,.025); }
-  39% { transform:scale(.995,.72); }
-  53% { transform:scale(1,1.012); }
-  70% { transform:scale(1,.997); }
+  12% { transform:scale(.98,.003); }
   100% { transform:scale(1); }
 }
 @keyframes screen-start-bloom {

@@ -2,14 +2,17 @@ import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=
 
 const checkbox = document.querySelector('#crt-effect');
 const storageKey = 'tesseract:crt-effect';
-let enabled = true;
-  try { enabled = localStorage.getItem(storageKey) !== 'false'; } catch { /* Enabled when storage is unavailable. */ }
-  checkbox.checked = enabled;
-  document.body.classList.toggle('crt-disabled', !enabled);
+let enabled = !matchMedia('(max-width: 900px)').matches;
+try {
+  const saved = localStorage.getItem(storageKey);
+  if (saved === 'true' || saved === 'false') enabled = saved === 'true';
+} catch { /* Keep the viewport default when storage is unavailable. */ }
+checkbox.checked = enabled;
+document.body.classList.toggle('crt-disabled', !enabled);
 
-  const effects = [];
-  const detailLayers = [];
-  function initializeCRT() {
+const effects = [];
+const detailLayers = [];
+function initializeCRT() {
   try {
     const screen = document.querySelector('#crt-screen');
     const curvature = parseFloat(getComputedStyle(screen).getPropertyValue('--crt-curvature')) || 0;
@@ -41,9 +44,23 @@ let enabled = true;
     }
     screen.dataset.crtGeometry = 'shared-viewport';
     screen.dataset.crtRenderer = crt.renderer;
-    document.addEventListener('crt:frame', () => { crt.render(); pageDetails.render(); menuDetails.render(); });
+    let pendingFrame = 0;
+    const render = () => {
+      cancelAnimationFrame(pendingFrame); pendingFrame = 0;
+      crt.render(); pageDetails.render(); menuDetails.render();
+    };
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    document.addEventListener('crt:frame', () => {
+      // Several frame/name painters can update during one tick. Upload once.
+      if (document.hidden || reduced.matches) render();
+      else if (!pendingFrame) pendingFrame = requestAnimationFrame(render);
+    });
     // ResizeObserver/rAF may be suspended in a background Safari tab.
-    document.addEventListener('crt:layout', () => { for (const effect of effects) effect.refresh(); });
+    document.addEventListener('crt:layout', () => {
+      for (const effect of effects) effect.refresh();
+      // The aperture must leave its opening-line geometry even if rAF pauses.
+      render();
+    });
     checkbox.addEventListener('change', () => {
       document.body.classList.toggle('crt-disabled', !checkbox.checked);
       for (const effect of effects) effect.setEnabled(checkbox.checked);

@@ -18,6 +18,7 @@ document.addEventListener('visibilitychange', () => {
   else if (pausedAt !== null) { epoch += performance.now() - pausedAt; pausedAt = null; }
 });
 const revealDuration = .01 * loadingTimeScale;
+const framePause = .22;
 const contentPhase = group => group.matches('.intro') ? .43 : group.matches('.experience') ? .52
   : group.matches('.education-group') ? .59 : group.matches('.skills') ? .64
   : group.matches('.orientation-readout') ? .56 : .46;
@@ -54,7 +55,7 @@ export class AsciiFrame {
       this.points = [];
       const glyph = (text, x, y, phase, corner = false) => this.points.push({ text, x, y, phase, corner });
       const fromEnds = progress => Math.min(progress, 1 - progress) * 2;
-      const traceStep = (progress, travel) => Math.ceil(progress * travel / .045 - 1e-9) * .045;
+      const traceStep = (progress, travel) => progress * travel;
       const sidePhase = y => .09 + traceStep(fromEnds((y - top) / Math.max(1, bottom - top)), .36);
       const horizontal = (y, startPhase = .09, travel = .36) => {
         for (let column = 1; column < columns; column++) {
@@ -87,6 +88,13 @@ export class AsciiFrame {
           this.reveals.push({ node:block, phase:contentPhase(group) + (blocks.length > 1 ? i / (blocks.length - 1) * .24 : 0) });
         });
       }
+      if (panel.matches('.portfolio-window')) {
+        const footer = panel.ownerDocument.querySelector('footer');
+        if (footer) {
+          footer.classList.add('terminal-reveal');
+          this.reveals.push({ node:footer, phase:.43 });
+        }
+      }
       this.header = panel.matches('.drawer-toggle') ? panel.querySelector('.window-title') : titlebar;
       this.paintKey = ''; this.paint(this.elapsed ?? Infinity);
     };
@@ -97,7 +105,7 @@ export class AsciiFrame {
   paint(elapsed = Infinity) {
     if (!this.geometry) return;
     this.elapsed = elapsed;
-    const key = Number.isFinite(elapsed) ? Math.floor(elapsed * 30) : 'settled';
+    const key = Number.isFinite(elapsed) ? Math.floor(elapsed * 60) : 'settled';
     if (key === this.paintKey) return;
     this.paintKey = key;
     const { width, height, font, family, left, cellWidth, titleY, headerHeight } = this.geometry;
@@ -105,16 +113,18 @@ export class AsciiFrame {
     const palette = ['--cream','--gold','--accent','--scene-ember','--rule'].map(name => style.getPropertyValue(name).trim());
     const { duration = 1, delay = 0 } = this.sequence || {};
     const animated = Number.isFinite(elapsed) && this.sequence;
+    const textStart = delay + duration * .70 + framePause;
+    this.panel.dataset.frame = !animated || elapsed >= delay + duration * .70 ? 'complete' : 'tracing';
     for (const reveal of this.reveals) {
-      const visible = !animated || elapsed >= delay + duration * reveal.phase + revealDuration;
+      const visible = !animated || elapsed >= textStart + duration * (reveal.phase - .43) + revealDuration;
       const value = visible ? 'visible' : 'hidden';
       if (reveal.node.style.visibility !== value) reveal.node.style.visibility = value;
     }
-    const headerVisible = !animated || elapsed >= delay + duration * .35 + revealDuration;
+    const headerVisible = !animated || elapsed >= textStart;
     if (this.header) this.header.style.visibility = headerVisible ? 'visible' : 'hidden';
     const ctx = this.context;
     ctx.clearRect(0, 0, width, height);
-    if (headerVisible) {
+    if (!animated || elapsed >= delay + duration * .35) {
       ctx.fillStyle = style.getPropertyValue('--window-titlebar-bg').trim();
       ctx.fillRect(0, 0, width, headerHeight);
     }
@@ -122,9 +132,11 @@ export class AsciiFrame {
     for (const point of this.points) {
       const time = elapsed - delay - duration * point.phase;
       if (animated && time < 0) continue;
+      ctx.globalAlpha = animated ? Math.min(1, time / (duration * .04)) : 1;
       ctx.fillStyle = animated ? palette[Math.min(4, Math.floor(time / (duration * (point.corner ? .38 : .24)) * 4))] : palette[4];
       ctx.fillText(point.text, point.x, point.y);
     }
+    ctx.globalAlpha = 1;
     const title = this.panel.querySelector('.window-title');
     if (title && headerVisible) {
       ctx.font = `10px ${family}`; ctx.textAlign = 'left';
@@ -142,7 +154,7 @@ export class AsciiFrame {
 export class Entrance {
   constructor(target, reduced = false, { duration = 1.95, delay = 0, temporary = false } = {}) {
     duration *= loadingTimeScale; delay *= loadingTimeScale;
-    this.duration = duration + delay;
+    this.duration = delay + duration * 1.25 + framePause;
     this.sequence = { duration, delay };
     this.temporary = temporary; this.finished = false;
     this.panel = target?.matches('.portfolio-window,.orientation-indicator,.drawer-toggle') ? target : target?.querySelector('.portfolio-window');

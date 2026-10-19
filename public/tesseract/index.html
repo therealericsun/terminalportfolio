@@ -10,12 +10,23 @@
   <script>
     // Set the first-paint state before the stylesheet or deferred module loads.
     document.documentElement.classList.add('is-loading', 'crt-booting', 'content-hold');
-    window.addEventListener('error', () => document.documentElement.classList.remove('is-loading', 'crt-booting', 'crt-powering', 'content-hold'));
+    const recoverStartup = () => {
+      const root = document.documentElement;
+      if (!root.matches('.is-loading,.crt-booting,.crt-powering,.content-hold')) return;
+      root.classList.remove('is-loading', 'crt-booting', 'crt-powering', 'content-hold');
+      document.dispatchEvent(new Event('crt:contentstart'));
+      document.dispatchEvent(new Event('crt:layout'));
+      document.dispatchEvent(new Event('crt:frame'));
+    };
+    // A failed/blocked module must not leave the page behind the black gate.
+    const startupDeadline = setTimeout(recoverStartup, 10000);
+    document.addEventListener('crt:contentstart', () => clearTimeout(startupDeadline), { once:true });
+    window.addEventListener('error', recoverStartup, true);
   </script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=shared-timeline-10">
-  <script type="module" src="./assets/scripts/screen-intro.js"></script>
-  <script type="module" src="./assets/scripts/crt-init.js?v=shared-timeline-10"></script>
-  <script type="module" src="./assets/scripts/tesseract.js?v=shared-timeline-10" onerror="document.documentElement.classList.remove('is-loading')"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-11">
+  <script type="module" src="./assets/scripts/screen-intro.js?v=startup-11"></script>
+  <script type="module" src="./assets/scripts/crt-init.js?v=startup-11"></script>
+  <script type="module" src="./assets/scripts/tesseract.js?v=startup-11"></script>
 </head>
 <body>
   <div id="crt-power" aria-hidden="true" inert></div>

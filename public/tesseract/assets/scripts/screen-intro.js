@@ -26,7 +26,7 @@ function ready() {
   if (motion.matches) { finish(); return; }
   before = setTimeout(() => {
     root.classList.add('crt-powering');
-    fallback = setTimeout(finish, 1400);
+    fallback = setTimeout(finish, 1700);
   }, 1000);
 }
 const observer = new MutationObserver(ready);
