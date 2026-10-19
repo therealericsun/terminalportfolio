@@ -19,6 +19,13 @@ document.addEventListener('visibilitychange', () => {
 });
 const revealDuration = .01 * loadingTimeScale;
 const framePause = .22;
+function rasterHeight(elapsed, sequence, height, cellHeight) {
+  if (!sequence || !Number.isFinite(elapsed)) return height;
+  const { duration, delay } = sequence;
+  const progress = Math.max(0, Math.min(1, (elapsed - delay - duration * .12) / (duration * .54)));
+  const row = Math.max(2, Math.min(cellHeight, height / 24));
+  return progress === 1 ? height : Math.floor(height * progress / row) * row;
+}
 const contentPhase = group => group.matches('.intro') ? .43 : group.matches('.experience') ? .52
   : group.matches('.education-group') ? .59 : group.matches('.skills') ? .64
   : group.matches('.orientation-readout') ? .56 : .46;
@@ -77,7 +84,7 @@ export class AsciiFrame {
       if (header) horizontal(headerY, sidePhase(headerY), .18);
       for (const [x, y] of [[left, top], [right, top], [right, bottom], [left, bottom]]) glyph('+', x, y, 0, true);
       if (header) { glyph('+', left, headerY, sidePhase(headerY)); glyph('+', right, headerY, sidePhase(headerY)); }
-      this.geometry = { width, height, font, family:typography.fontFamily, left, cellWidth,
+      this.geometry = { width, height, font, family:typography.fontFamily, left, cellWidth, cellHeight,
         headerHeight:panel.matches('.window-titlebar') ? height : headerY || 0, titleY:(top + (headerY ?? bottom)) / 2 };
       this.reveals = [];
       for (const group of panel.querySelectorAll('.intro,.experience,.education-group,.skills,.orientation-diagram,.orientation-readout')) {
@@ -108,7 +115,7 @@ export class AsciiFrame {
     const key = Number.isFinite(elapsed) ? Math.floor(elapsed * 60) : 'settled';
     if (key === this.paintKey) return;
     this.paintKey = key;
-    const { width, height, font, family, left, cellWidth, titleY, headerHeight } = this.geometry;
+    const { width, height, font, family, left, cellWidth, cellHeight, titleY, headerHeight } = this.geometry;
     const style = getComputedStyle(document.documentElement);
     const palette = ['--cream','--gold','--accent','--scene-ember','--rule'].map(name => style.getPropertyValue(name).trim());
     const { duration = 1, delay = 0 } = this.sequence || {};
@@ -131,10 +138,8 @@ export class AsciiFrame {
     this.canvasKey = canvasKey;
     const ctx = this.context;
     ctx.clearRect(0, 0, width, height);
-    if (!animated || elapsed >= delay + duration * .35) {
-      ctx.fillStyle = style.getPropertyValue('--window-titlebar-bg').trim();
-      ctx.fillRect(0, 0, width, headerHeight);
-    }
+    ctx.fillStyle = style.getPropertyValue('--window-titlebar-bg').trim();
+    ctx.fillRect(0, 0, width, Math.min(headerHeight, rasterHeight(elapsed, this.sequence, height, cellHeight)));
     ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const point of this.points) {
       const time = elapsed - delay - duration * point.phase;
@@ -168,7 +173,9 @@ export class Entrance {
     this.panel = target?.matches('.portfolio-window,.orientation-indicator,.drawer-toggle') ? target : target?.querySelector('.portfolio-window');
     this.onFocus = () => this.finish();
     if (!this.panel) { this.finish(); return; }
-    this.originalBackground = this.panel.style.backgroundColor;
+    this.backgroundHost = temporary ? this.panel.closest('.settings-drawer') || this.panel : this.panel;
+    this.backgroundStyles = ['background-color', 'background-image', 'background-size', 'background-repeat', 'background-position']
+      .map(property => [property, this.backgroundHost.style.getPropertyValue(property), this.backgroundHost.style.getPropertyPriority(property)]);
     this.ascii = new AsciiFrame(this.panel);
     this.frame = this.ascii.element;
     if (reduced) { this.finish(); return; }
@@ -176,12 +183,19 @@ export class Entrance {
     this.frame.classList.add('assembly-frame');
     this.panel.classList.add('is-assembling');
     this.panel.dataset.entrance = 'opening';
+    // Paint opaque terminal rows into a stationary background; no fade or
+    // transformed child layer that could escape Safari's shared CRT filter.
+    Object.assign(this.backgroundHost.style, {
+      backgroundColor:'transparent', backgroundImage:'linear-gradient(var(--window-bg),var(--window-bg))',
+      backgroundRepeat:'no-repeat', backgroundPosition:'left top',
+    });
     this.paint(0);
     this.panel.addEventListener('focusin', this.onFocus, { once:true });
   }
   paint(elapsed) {
-    const { duration, delay } = this.sequence;
-    this.panel.style.backgroundColor = elapsed < delay + duration * .35 ? 'transparent' : 'var(--window-bg)';
+    const { height, cellHeight } = this.ascii.geometry;
+    const size = `100% ${rasterHeight(elapsed, this.sequence, height, cellHeight)}px`;
+    if (this.backgroundHost.style.backgroundSize !== size) this.backgroundHost.style.backgroundSize = size;
     this.ascii.paint(elapsed);
   }
   update() {
@@ -195,7 +209,10 @@ export class Entrance {
     if (this.temporary) this.ascii?.remove();
     else { this.frame?.classList.remove('assembly-frame'); this.ascii?.paint(Infinity); }
     if (this.panel) {
-      this.panel.style.backgroundColor = this.originalBackground || '';
+      for (const [property, value, priority] of this.backgroundStyles) {
+        if (value) this.backgroundHost.style.setProperty(property, value, priority);
+        else this.backgroundHost.style.removeProperty(property);
+      }
       this.panel.classList.remove('is-assembling');
       this.panel.setAttribute('data-entrance', 'complete');
       this.panel.removeEventListener('focusin', this.onFocus);

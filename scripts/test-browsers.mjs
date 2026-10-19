@@ -25,7 +25,7 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         };
         const observer = new MutationObserver(attach);
         observer.observe(document, { childList:true, subtree:true }); attach();
-        window.startup = { reveals: [] };
+        window.startup = { reveals: [], fills: [] };
         let booting = false;
         new MutationObserver(() => {
           const active = document.documentElement.classList.contains('crt-booting');
@@ -37,6 +37,13 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
           const nodes = [...document.querySelectorAll('.portfolio-window .terminal-reveal')];
           const seen = new Set();
           function sample() {
+            const panel = document.querySelector('.portfolio-window');
+            if (panel?.style.backgroundSize) {
+              const height = parseFloat(panel.style.backgroundSize.split(' ')[1]);
+              if (height !== window.startup.fills.at(-1)?.height) {
+                window.startup.fills.push({ height, opacity:getComputedStyle(panel).opacity });
+              }
+            }
             if (!window.startup.frame && document.querySelector('.portfolio-window')?.dataset.frame === 'complete') {
               window.startup.frame = performance.now() - window.startup.content;
             }
@@ -57,6 +64,8 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.ok(screen?.width > 300 && screen?.height > 500, 'ad-block cosmetic rules must not collapse the viewport');
       assert.equal(await page.getByRole('link', { name:'GitHub', exact:true }).isVisible(), true);
       const startup = await page.evaluate(() => window.startup);
+      assert.ok(startup.fills.length > 8, 'panel background fills in multiple terminal rows');
+      assert.ok(startup.fills.every((fill, i) => fill.opacity === '1' && (!i || fill.height >= startup.fills[i - 1].height)), 'row fill advances without fading');
       assert.ok(startup.content - startup.opened >= 980, 'one-second pause after screen opening');
       const reveal = i => startup.reveals.find(item => item.i === i)?.ms ?? Infinity;
       // Preserve Firefox’s sequence; a slow display frame may reveal adjacent steps together.
