@@ -7,28 +7,31 @@ let canvasEffect;
 const graphicsEffects = [];
 const screen = document.querySelector('#screen-viewport');
 screen.style.setProperty('--crt-glow', displaySettings.glow);
+function syncDisplayControl(input) {
+  const value = Number(input.value);
+  const text = `${Number(value.toFixed(1))}%`;
+  input.parentElement.querySelector('output').value = text;
+  input.setAttribute('aria-valuetext', text);
+  input.style.setProperty('--fill', `${(value - Number(input.min)) / (Number(input.max) - Number(input.min)) * 100}%`);
+}
+function updateDisplaySetting(input) {
+  syncDisplayControl(input);
+  const key = input.dataset.crtOption;
+  displaySettings[key] = Number(input.value) / 100;
+  if (key === 'glow') {
+    screen.style.setProperty('--crt-glow', displaySettings.glow);
+    for (const effect of graphicsEffects) effect.update({ glow:displaySettings.glow });
+  } else canvasEffect?.update({ [key]:displaySettings[key] });
+}
 for (const input of displayControls) {
-  const sync = () => {
-    const value = Number(input.value);
-    const text = `${Number(value.toFixed(1))}%`;
-    input.parentElement.querySelector('output').value = text;
-    input.setAttribute('aria-valuetext', text);
-    input.style.setProperty('--fill', `${(value - Number(input.min)) / (Number(input.max) - Number(input.min)) * 100}%`);
-  };
-  sync();
+  syncDisplayControl(input);
   input.addEventListener('input', () => {
-    if (input.disabled) return;
-    sync();
-    const key = input.dataset.crtOption;
-    displaySettings[key] = Number(input.value) / 100;
-    if (key === 'glow') {
-      screen.style.setProperty('--crt-glow', displaySettings.glow);
-      for (const effect of graphicsEffects) effect.update({ glow:displaySettings.glow });
-    } else canvasEffect?.update({ [key]:displaySettings[key] });
+    if (!input.disabled) updateDisplaySetting(input);
   });
 }
 const storageKey = 'tesseract:crt-effect';
-let enabled = !matchMedia('(max-width: 900px)').matches;
+const defaultEnabled = () => !matchMedia('(max-width: 900px)').matches;
+let enabled = defaultEnabled();
 try {
   const saved = localStorage.getItem(storageKey);
   if (saved === 'true' || saved === 'false') enabled = saved === 'true';
@@ -42,6 +45,23 @@ syncDisplayEnabled();
 
 const effects = [];
 const detailLayers = [];
+function applyEnabled() {
+  enabled = checkbox.checked;
+  document.body.classList.toggle('crt-disabled', !checkbox.checked);
+  for (const effect of effects) effect.setEnabled(checkbox.checked);
+  syncDisplayEnabled();
+}
+document.querySelector('#rotation-reset').addEventListener('click', () => {
+  for (const input of displayControls) {
+    input.value = input.defaultValue;
+    updateDisplaySetting(input);
+  }
+  if (!checkbox.disabled) {
+    checkbox.checked = defaultEnabled();
+    applyEnabled();
+    try { localStorage.removeItem(storageKey); } catch { /* Defaults still apply for this visit. */ }
+  }
+});
 function initializeCRT() {
   try {
     const curvature = parseFloat(getComputedStyle(screen).getPropertyValue('--crt-curvature')) || 0;
@@ -101,9 +121,7 @@ function initializeCRT() {
       render();
     });
     checkbox.addEventListener('change', () => {
-      document.body.classList.toggle('crt-disabled', !checkbox.checked);
-      for (const effect of effects) effect.setEnabled(checkbox.checked);
-      syncDisplayEnabled();
+      applyEnabled();
       try { localStorage.setItem(storageKey, String(checkbox.checked)); } catch { /* Preference remains active for this visit. */ }
     });
   } catch (error) {

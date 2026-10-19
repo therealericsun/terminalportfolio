@@ -3,7 +3,7 @@
 Plain HTML, CSS and JavaScript. Page assets live in `public/tesseract/assets/`. Run `npm run dev` from the repository root, then open <http://localhost:4321>.
 
 - Drag the shape, follow the pointer, or use the settings drawer to change rotation, speed, perspective and shading.
-- Display pairs the scene controls with CRT grain, phosphor mask and glow sliders; curvature stays fixed.
+- Display pairs the scene controls with CRT grain (2.5%), phosphor mask (20%) and glow (10%) sliders; curvature stays fixed. Reset restores every scene/display setting and the default CRT toggle for the current layout.
 - One texture overlay covers the artwork and native panels; its phosphor mask follows the screen curvature. Glow also applies to frame graphics and HTML text.
 - Enter a seed to reproduce a shape; `tesseract` restores the default.
 - CRT defaults off in the mobile layout (900px and narrower); a saved toggle preference takes priority. Reduced motion skips the startup and freezes animation.

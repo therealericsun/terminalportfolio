@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-18';
+import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-19';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -682,6 +682,7 @@ document.querySelector('#rotation-reset').addEventListener('click', () => {
   Object.assign(orientation, initialOrientation());
   Object.assign(settings, { speed: 1, depth: 5, detail: .6, edgeWidth: 1, followMouse: true, seed: initialSeed });
   shape = shapeForSeed(settings.seed); shapeScale = framingScaleFor(shape.vertices); seedInput.value = settings.seed;
+  paused = reduced.matches;
   lastMouse = null; lastMouseMovement = -Infinity;
   time = 0; assemblyTime = reduced.matches ? assemblyDuration : 0; draw(); start();
 });

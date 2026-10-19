@@ -159,7 +159,9 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       });
       const beforeEffects = await effectUniforms();
       assert.equal(beforeEffects.Scanlines, 0, 'phosphor mask replaces scanlines');
-      assert.ok(Math.abs(beforeEffects.Mask - .08) < .00001, 'phosphor mask has a visible default');
+      for (const [key, value] of Object.entries({Grain:.025, Mask:.2, Glow:.1})) {
+        assert.ok(Math.abs(beforeEffects[key] - value) < .00001, `${key} uses its requested default`);
+      }
       for (const [id, uniform] of [['display-grain','Grain'], ['display-mask','Mask'], ['display-glow','Glow']]) {
         const control = page.locator('#' + id);
         const initial = Number(await control.inputValue());
@@ -221,6 +223,50 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       console.log(`${name} ${mobile ? 'phone 2×' : 'desktop'}: startup, order, frame, slider dragging and repo link pass`);
       await page.close();
     }
+    for (const mobile of [false, true]) {
+      const page = await browser.newPage({viewport:mobile ? {width:390,height:844} : {width:1440,height:1000}, reducedMotion:'reduce'});
+      await page.goto(url);
+      await page.waitForFunction(() => document.querySelector('.portfolio-window')?.dataset.entrance === 'complete');
+      await page.keyboard.press('Tab'); await page.locator('#drawer-toggle').focus(); await page.keyboard.press('Enter');
+      for (const reducedMotion of ['reduce', 'no-preference']) {
+        await page.emulateMedia({reducedMotion});
+        // WebKit applies emulated media preferences on a later presentation frame.
+        await page.waitForFunction(reduce => matchMedia('(prefers-reduced-motion:reduce)').matches === reduce
+          && document.querySelector('#auto-rotate').checked === !reduce, reducedMotion === 'reduce');
+        const state = await page.evaluate(() => {
+          const toggle = (id, checked) => { const e=document.querySelector('#'+id); e.checked=checked; e.dispatchEvent(new Event('change',{bubbles:true})); };
+          toggle('crt-effect', true);
+          for (const input of document.querySelectorAll('#settings-drawer input[type=range]')) {
+            input.value=Number(input.min)+(Number(input.max)-Number(input.min))*.7;
+            input.dispatchEvent(new Event('input',{bubbles:true}));
+          }
+          toggle('auto-rotate', matchMedia('(prefers-reduced-motion:reduce)').matches);
+          toggle('mouse-follow', false);
+          document.querySelector('#shape-seed').value='reset-check'; document.querySelector('#shape-form').requestSubmit();
+          toggle('crt-effect', matchMedia('(max-width:900px)').matches);
+          document.querySelector('#rotation-reset').click();
+          const scene=document.querySelector('#tesseract');
+          return {values:Object.fromEntries([...document.querySelectorAll('#settings-drawer input[type=range]')].map(e=>[e.id,Number(e.value)])),
+            crt:document.querySelector('#crt-effect').checked, disabled:document.querySelectorAll('input[data-crt-option]:disabled').length,
+            auto:document.querySelector('#auto-rotate').checked, follow:document.querySelector('#mouse-follow').checked,
+            seed:document.querySelector('#shape-seed').value, shape:scene.dataset.shape, preference:localStorage.getItem('tesseract:crt-effect'),
+            outputs:[...document.querySelectorAll('input[data-crt-option]')].map(e=>e.parentElement.querySelector('output').value)};
+        });
+        assert.deepEqual(state.values, {'angle-xy':0,'angle-xz':26.4,'angle-yz':20.6,'angle-xw':0,'angle-yw':0,'angle-zw':0,
+          'rotation-speed':1,'projection-depth':5,'face-detail':60,'edge-width':1,'display-grain':2.5,'display-mask':20,'display-glow':10}, 'reset restores every slider');
+        assert.deepEqual({...state,values:undefined}, {values:undefined,crt:!mobile,disabled:mobile?3:0,auto:reducedMotion==='no-preference',follow:true,seed:'tesseract',shape:'tesseract',preference:null,outputs:['2.5%','20%','10%']}, 'reset restores toggles, seed, CRT preference and outputs');
+        await page.evaluate(() => {const e=document.querySelector('#crt-effect'); e.checked=true; e.dispatchEvent(new Event('change',{bubbles:true}));});
+        const applied = await page.evaluate(() => {
+          const overlay=document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"]');
+          return {grain:Number(overlay.querySelector('[data-crt-grain]').style.opacity),mask:Number(overlay.querySelector('[data-crt-mask]').style.opacity),
+            glow:[...document.querySelectorAll('canvas[data-crt-renderer]')].map(canvas=>{const gl=canvas.getContext(canvas.dataset.crtRenderer);return gl.getUniform(gl.getParameter(gl.CURRENT_PROGRAM),gl.getUniformLocation(gl.getParameter(gl.CURRENT_PROGRAM),'uGlow'));})};
+        });
+        assert.equal(applied.grain,.025); assert.equal(applied.mask,.2);
+        assert.ok(applied.glow.every(value=>Math.abs(value-.1)<.00001), 'reset reaches every GPU frame/name layer');
+      }
+      await page.close();
+    }
+    console.log(`${name}: all settings reset to defaults on desktop/mobile, with reduced motion respected`);
     for (const module of ['screen-intro', 'tesseract']) {
       const page = await browser.newPage({ reducedMotion: 'reduce' });
       await page.route(`**/${module}.js*`, route => route.abort());
