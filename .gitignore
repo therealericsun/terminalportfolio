@@ -1,3 +1,13 @@
-_site/
+# Generated site and optional local tools
+dist/
 node_modules/
+
+# Logs and local secrets
+*.log
+.env
+.env.*
+
+# Editor and operating system files
 .DS_Store
+.idea/
+.vscode/

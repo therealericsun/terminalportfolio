@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatePolytope, defaultSeed } from '../polytope.js';
-import { projectOrientation, rotationPlanes, camera } from '../tesseract-math.js';
+import { generatePolytope, defaultSeed } from '../public/tesseract/assets/scripts/polytope.js';
+import { projectOrientation, rotationPlanes, camera } from '../public/tesseract/assets/scripts/tesseract-math.js';
 
 // Independent Gaussian elimination checks the side of a 4D supporting plane.
 function determinant4(rows) {

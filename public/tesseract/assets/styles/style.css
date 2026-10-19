@@ -1,10 +1,11 @@
 :root {
-  --bg: #080609; --text: #dfd2b9; --cream: #fff2cd; --gold: #ffd16e;
+  --bg: #161318; --text: #dfd2b9; --cream: #fff2cd; --gold: #ffd16e;
   --accent: #f8922e; --muted: #bba48a; --faint: #a08a72; --rule: #75512d;
   --drawer-handle-height: 34px;
+  --crt-curvature: .04;
   --body-font-size: 11px;
   --loading-time-scale: 1.5;
-  --window-bg: #080607; --window-titlebar-bg: #0c0808;
+  --window-bg: #0b090c; --window-titlebar-bg: #0c0808;
   --scene-shadow: #541a0e; --scene-ember: #c44213;
   color-scheme: dark; background: var(--bg); color: var(--text);
   font: var(--body-font-size)/1.34 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -84,13 +85,10 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
 .orientation-indicator.is-compact .orientation-readout { grid-template-columns:repeat(4,minmax(0,1fr)); padding:10px 14px 12px; column-gap:10px; }
 
 /* One nonmodal drawer: all settings enter and leave together. */
-.settings-drawer { position: fixed; z-index: 5; bottom: 0; right: calc(3.5vw + 4.2px); width: calc(36% + 75.6px); transform: translateY(calc(100% - var(--drawer-handle-height))); transition: transform .24s cubic-bezier(.2,.7,.2,1); border-bottom: 0; box-shadow: 0 -8px 30px #0003; font-size: var(--body-font-size); line-height: 1.4; color: var(--muted); }
-.settings-drawer.is-entering { animation:drawer-arrive calc(1.12s * var(--loading-time-scale)) cubic-bezier(.16,1,.3,1) calc(.72s * var(--loading-time-scale)) backwards; }
-@keyframes drawer-arrive {
-  0% { translate:0 46px; opacity:0; }
-  100% { translate:0 0; opacity:1; }
-}
-.settings-drawer.is-open { transform: translateY(0); }
+.settings-surface { position:absolute; z-index:5; top:0; bottom:0; right:calc(3.5vw + 4.2px); width:calc(36% + 75.6px); pointer-events:none; display:flex; flex-direction:column; justify-content:flex-end; }
+.settings-drawer { position:relative; flex:0 0 auto; margin-bottom:calc(var(--screen-height) * .026 - var(--drawer-height,400px) + var(--drawer-handle-height)); width:100%; pointer-events:auto; border-bottom: 0; box-shadow: 0 -8px 30px #0003; font-size: var(--body-font-size); line-height: 1.4; color: var(--muted); }
+.settings-drawer.is-entering { top:46px; }
+.settings-drawer.is-open { margin-bottom:calc(var(--screen-height) * .026); }
 .drawer-toggle { appearance: none; width: 100%; height: calc(var(--drawer-handle-height) - 1px); border: 0; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); border-radius: 0; font-family: inherit; text-align: left; cursor: pointer; }
 .drawer-toggle:hover { color: var(--gold); }
 .drawer-toggle:focus-visible { outline-offset: -4px; }
@@ -108,11 +106,11 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
 .setting-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .setting-heading>span { color: var(--muted); }
 .setting output { color: var(--text); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
-.setting input { display: block; appearance: none; -webkit-appearance: none; width: 100%; height: 12px; margin: 5px 0 7px; border: 1px solid var(--rule); border-radius: 0; background: linear-gradient(to right,color-mix(in srgb,var(--accent) 72%,var(--bg)) 0 var(--fill,0%),color-mix(in srgb,var(--bg) 90%,var(--accent)) var(--fill,0%) 100%); cursor: ew-resize; accent-color: var(--accent); }
+.setting input { display: block; appearance: none; -webkit-appearance: none; width: 100%; height:24px; margin:-1px 0 1px; padding:0; border:0; border-radius: 0; background:transparent; cursor:ew-resize; touch-action:none; accent-color: var(--accent); }
 .setting input:hover { border-color: var(--accent); }
-.setting input::-webkit-slider-runnable-track { height: 10px; background: transparent; }
+.setting input::-webkit-slider-runnable-track { height:12px; border:1px solid var(--rule); border-radius:0; background:linear-gradient(to right,color-mix(in srgb,var(--accent) 72%,var(--bg)) 0 var(--fill,0%),color-mix(in srgb,var(--bg) 90%,var(--accent)) var(--fill,0%) 100%); }
 .setting input::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 1px; height: 10px; margin: 0; border: 0; border-radius: 0; background: transparent; }
-.setting input::-moz-range-track { height: 10px; border: 0; border-radius: 0; background: transparent; }
+.setting input::-moz-range-track { height:12px; border:1px solid var(--rule); border-radius:0; background:linear-gradient(to right,color-mix(in srgb,var(--accent) 72%,var(--bg)) 0 var(--fill,0%),color-mix(in srgb,var(--bg) 90%,var(--accent)) var(--fill,0%) 100%); }
 .setting input::-moz-range-progress { height: 10px; background: transparent; }
 .setting input::-moz-range-thumb { width: 1px; height: 10px; border: 0; border-radius: 0; background: transparent; }
 .setting input:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; border-radius: 0; }
@@ -132,7 +130,7 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
 .checkbox-setting input:focus-visible { outline:1px solid var(--gold); outline-offset:3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-@media(min-width:1800px) { .settings-drawer { right: 6.4vw; width: 43.2%; } #tesseract-scene { right: 4vw; width: 48%; height: min(900px,calc(100svh - 90px)); } .page { max-width: 850px; } }
+@media(min-width:1800px) { .settings-surface { right:6.4vw; width:43.2%; } #tesseract-scene { right: 4vw; width: 48%; height: min(900px,calc(100svh - 90px)); } .page { max-width: 850px; } }
 @media(max-width:1100px) and (min-width:901px) { .page { width: 49%; padding-left: 28px; } .terminal-body { padding: 19px 15px 15px; } .details { gap: 14px; } }
 @media(max-width:900px) {
   :root { --drawer-handle-height:42px; --mobile-scene-height:clamp(320px,70vw,460px); }
@@ -146,8 +144,7 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
   #tesseract-scene { position:relative; right:auto; top:auto; transform:none; width:100%; height:var(--mobile-scene-height); margin:24px auto 0; }
   body.settings-open #tesseract-scene { height:min(var(--mobile-scene-height),max(48px,calc(100svh - var(--open-drawer-height,360px) - 80px))); }
   footer { position:static; margin-top:16px; }
-  .settings-drawer { right:auto; left:50%; width:min(520px,calc(100% - 48px)); transform:translate(-50%,calc(100% - var(--drawer-handle-height))); }
-  .settings-drawer.is-open { transform:translate(-50%,0); }
+  .settings-surface { right:auto; left:50%; width:min(520px,calc(100% - 48px)); transform:translateX(-50%); }
   .drawer-content { padding:16px; gap:16px; }
   .settings-section { padding-left:16px; }
 }
@@ -187,58 +184,106 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
   .angle-controls,.rotation-options { column-gap:18px; }
   .angle-controls { row-gap:6px; }
   .extra-settings { gap:6px; }
-  .setting input { margin-top:6px; margin-bottom:9px; }
+  .setting input { margin-top:0; margin-bottom:3px; }
   .checkbox-setting { min-height:24px; }
 }
-@media(prefers-reduced-motion:reduce) { .settings-drawer { transition: none; } .settings-drawer.is-entering { animation:none; } }
 @media(min-width:901px) and (max-height:850px) { .page { padding-top:32px; padding-bottom:32px; } footer { bottom:16px; } }
 @media(min-width:901px) and (max-width:1100px) and (max-height:850px) { .page { padding-top:12px; padding-bottom:36px; } }
 
 /* Corner sparks and traced edges assemble the same frame as the 4-D scene. */
 .portfolio-window { position:relative; }
-.is-assembling { overflow:visible; animation:wireframe-shell var(--assembly-duration) linear var(--assembly-delay) both; }
+.is-assembling { overflow:visible; }
 :is(.terminal-window,.orientation-indicator):has(>.ascii-frame) { border-color:transparent; }
 :is(.terminal-window,.orientation-indicator):has(>.ascii-frame)>.window-titlebar { border-bottom-color:transparent; }
-/* Put the title on the same text row and character columns as the frame. */
-:is(.terminal-window,.orientation-indicator):has(>.ascii-frame)>.window-titlebar>.window-title {
-  position:absolute; left:calc(var(--frame-left) + 2 * var(--frame-cell)); right:calc(var(--frame-left) + 2 * var(--frame-cell));
-  top:var(--frame-title-y); transform:translateY(-50%); height:1.2em;
-  font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
-  letter-spacing:0;
-}
-.ascii-frame { position:absolute; z-index:3; inset:0; pointer-events:none; color:var(--rule); font:var(--body-font-size)/1.2 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; user-select:none; }
-.ascii-frame span { position:absolute; display:flex; align-items:center; justify-content:center; height:1.2em; line-height:1.2; transform:translate(-50%,-50%); }
-.assembly-edge { position:absolute; inset:0; }
-.assembly-frame span { animation:wireframe-glyph calc(var(--assembly-duration) * .24) steps(1,end) calc(var(--assembly-delay) + var(--assembly-duration) * var(--glyph-phase,0)) both; }
-.assembly-frame .assembly-corner { animation-duration:calc(var(--assembly-duration) * .38); }
+/* The canvas owns frame glyphs and titles; native text remains accessible. */
+:is(.terminal-window,.orientation-indicator):has(>.ascii-frame)>.window-titlebar { background:transparent; }
+:is(.terminal-window,.orientation-indicator):has(>.ascii-frame) .window-title { color:transparent; }
+.ascii-frame { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; font:var(--body-font-size)/1.2 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; }
 .settings-drawer:has(.drawer-toggle.is-assembling)>.ascii-frame { visibility:hidden; }
-.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>.window-title { animation:terminal-header calc(.01s * var(--loading-time-scale)) steps(1,end) calc(var(--assembly-delay) + var(--assembly-duration) * .35) both; }
-.is-assembling .terminal-reveal {
-  animation:terminal-header calc(.01s * var(--loading-time-scale)) steps(1,end) calc(var(--assembly-delay) + var(--assembly-duration) * (var(--content-phase,.46) + var(--text-phase,0))) both;
-}
-.portfolio-window.is-assembling .intro { --content-phase:.43; }
-.portfolio-window.is-assembling .experience { --content-phase:.52; }
-.portfolio-window.is-assembling .education-group { --content-phase:.59; }
-.portfolio-window.is-assembling .skills { --content-phase:.64; }
-.orientation-indicator.is-assembling .orientation-readout { --content-phase:.56; }
-@keyframes wireframe-shell {
-  0%,34.99% { background:transparent; border-color:transparent; }
-  35%,100% { background:var(--window-bg); border-color:transparent; }
-}
-/* Hold each palette color, then snap to the next shade without blending. */
-@keyframes wireframe-glyph {
-  0% { visibility:hidden; color:var(--cream); }
-  .01% { visibility:visible; color:var(--cream); }
-  25% { color:var(--gold); }
-  50% { color:var(--accent); }
-  75% { color:var(--scene-ember); }
-  100% { visibility:visible; color:var(--rule); }
-}
-@keyframes terminal-header { from { clip-path:inset(0 0 100% 0); } to { clip-path:inset(0); } }
 /* Trace the whole visible settings frame as it rises into view. */
 .drawer-toggle { position:relative; }
 .settings-drawer.is-entering { overflow:visible; }
-@media(prefers-reduced-motion:reduce) {
-  .is-assembling,.is-assembling>.window-titlebar,.drawer-toggle.is-assembling>.window-title,.is-assembling .terminal-reveal { animation:none; }
-  .assembly-frame,.assembly-frame span { animation:none; }
+
+
+/* One screen coordinate system for GPU artwork and native HTML surfaces. */
+html,body { height:100%; overflow:hidden; background:#000; }
+#crt-screen {
+  position:fixed; inset:clamp(12px,3vh,36px) clamp(12px,3.2vw,64px);
+  overflow:visible; background:var(--bg);
+  transform:translateZ(0); isolation:isolate;
+  --screen-height:94svh;
 }
+#crt-glass { position:absolute; inset:0; background:var(--bg); }
+#page-scroll { position:absolute; inset:0; overflow-x:hidden; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule) var(--bg); }
+#page-scroll>.page { min-height:var(--screen-height); }
+#render-backdrop { position:absolute; }
+body.crt-disabled #crt-screen { inset:0; clip-path:none; border-radius:0; box-shadow:none; --screen-height:100svh; }
+@media(max-width:900px) {
+  #page-scroll>.page { min-height:0; }
+  #page-scroll { padding-bottom:var(--drawer-handle-height); }
+  body.settings-open #page-scroll { padding-bottom:calc(var(--open-drawer-height,360px) - var(--drawer-handle-height)); }
+  body.settings-open { padding-bottom:0; }
+  body.settings-open #tesseract-scene { height:min(var(--mobile-scene-height),max(48px,calc(var(--screen-height) - var(--open-drawer-height,360px) - 80px))); }
+}
+
+/* All animated sources feed the dedicated WebGL pass beneath native HTML. */
+#crt-glass { z-index:1; background:transparent; }
+#crt-screen { background:var(--bg); }
+#crt-screen>#tesseract-scene { position:absolute; z-index:2; top:50%; height:min(900px,calc(var(--screen-height) - 90px)); }
+#tesseract-position { display:none; }
+@media(max-width:900px) {
+  #tesseract-position { display:block; width:100%; height:var(--mobile-scene-height); margin:24px auto 0; }
+  body.settings-open #tesseract-position { height:min(var(--mobile-scene-height),max(48px,calc(var(--screen-height) - var(--open-drawer-height,360px) - 80px))); }
+}
+@media(max-width:650px) { #tesseract-position { margin-top:20px; } }
+/* The screen clips the GPU canvas, native content, UI and textures together. */
+#crt-screen>[data-crt-generated] { pointer-events:none!important; }
+
+
+/* The actual picture opens from a thin beam; it is never replaced by static. */
+#crt-startup { position:fixed; inset:0; transform-origin:50% 50%; }
+html.crt-booting #crt-startup { visibility:hidden; }
+html.crt-powering #crt-startup {
+  visibility:visible; will-change:transform;
+  animation:screen-power-on 1.1s linear both;
+}
+#crt-power { display:none; position:fixed; z-index:2147483645; inset:0; background:#000; pointer-events:none; }
+html.crt-booting #crt-power { display:block; }
+html.crt-powering #crt-power { background:transparent; }
+#crt-power::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:0; }
+#crt-power::after { width:90%; height:85%; background:radial-gradient(ellipse,#de9b4218,transparent 65%); }
+html.crt-powering #crt-power::after { animation:screen-start-bloom 1.1s linear both; }
+@keyframes screen-power-on {
+  0% { transform:scale(.48,.001); }
+  17% { transform:scale(.96,.003); }
+  25% { transform:scale(.985,.025); }
+  39% { transform:scale(.995,.72); }
+  53% { transform:scale(1,1.012); }
+  70% { transform:scale(1,.997); }
+  100% { transform:scale(1); }
+}
+@keyframes screen-start-bloom {
+  0%,20% { opacity:0; transform:translate(-50%,-50%) scaleY(.02); }
+  37% { opacity:.45; transform:translate(-50%,-50%) scaleY(.75); }
+  54% { opacity:.3; transform:translate(-50%,-50%) scaleY(1); }
+  100% { opacity:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  html.crt-booting #crt-startup { visibility:visible; animation:none!important; }
+  #crt-power { display:none; }
+}
+
+/* The shared cached aperture is a compositor layer. CSS clipping an animated
+   WebGL canvas forces an expensive offscreen composition in Firefox. */
+
+@media(min-width:901px) { footer { bottom:36px; } }
+.drawer-content[inert] { visibility:hidden; }
+.drawer-content:not([inert]) { visibility:visible; }
+
+/* Let the glass settle for one second before starting the content entrances. */
+html.content-hold :is(.portfolio-window,.settings-drawer,.orientation-indicator,footer),
+html.content-hold :is(.portfolio-window,.settings-drawer,.orientation-indicator,footer) * { visibility:hidden!important; }
+
+
+.crt-setting { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.repo-link { font-size:10px; white-space:nowrap; }

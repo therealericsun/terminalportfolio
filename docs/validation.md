@@ -1,0 +1,10 @@
+# Verification · 2026-10-18
+
+- Website: syntax/reference checks, 12 geometry/shape tests and the static build pass. Six browser runs cover Chromium 156, Firefox 157 and WebKit 27.2 at desktop and 2× phone sizes.
+- CRT library: three geometry tests and 78 browser checks cover SVG/WebGL curvature, shared coordinates, source visibility, native interaction, resizing, scrolling, context recovery and complete teardown.
+- Startup uses one JavaScript presentation clock, preserving Firefox’s reveal order across engines. Checks enforce the one-second pause after screen opening. Reduced motion skips startup; background tabs pause animation. The extra colored startup line is removed.
+- ASCII artwork, names and frames use shared-screen WebGL passes. Native text and controls use the same viewport displacement on stationary surfaces. The drawer moves in normal flow; its map remains unchanged during expansion. Pixel checks verify curvature during movement and on the name. Frames are painted once, eliminating Safari’s duplicate bottom edges.
+- Browser checks cover continuous pointer dragging, native keyboard controls, repeated CRT toggles, Escape focus restoration, the repository link and error-free startup. Production checks also cover scrolling, missing assets and rendering without JavaScript.
+- Safari 26.5 was inspected directly for the name, portfolio/orientation frames, and collapsed/expanded settings. Automated WebKit checks exercise motion and slider dragging; they do not replace testing every Safari/device release.
+- Firefox measured roughly 26 rendered frames/sec at 1440×1000 with 2× density, versus roughly 11 with the former full-page SVG pass. Hardware affects results. The background copy remains because removing it alone did not resolve the bottleneck.
+- Inactive Astro code, models, demos, images and fonts were removed. Assets live under `public/tesseract/assets/`; there are no website npm dependencies. The former Astro build failed on missing `src/scripts/transformer.ts`; the active static build passes.

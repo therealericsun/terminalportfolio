@@ -3,20 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080609">
+  <meta name="theme-color" content="#161318">
   <meta name="description" content="Eric Sun — Physics and Computer Science at the University of Pennsylvania.">
   <title>Eric Sun</title>
-  <link rel="icon" href="./favicon.svg?v=ember-3" type="image/svg+xml">
+  <link rel="icon" href="./assets/icons/favicon.svg?v=ember-3" type="image/svg+xml">
   <script>
     // Set the first-paint state before the stylesheet or deferred module loads.
-    document.documentElement.classList.add('is-loading');
-    window.addEventListener('error', () => document.documentElement.classList.remove('is-loading'));
+    document.documentElement.classList.add('is-loading', 'crt-booting', 'content-hold');
+    window.addEventListener('error', () => document.documentElement.classList.remove('is-loading', 'crt-booting', 'crt-powering', 'content-hold'));
   </script>
-  <link rel="stylesheet" href="./style.css?v=loading-pace-26">
-  <script type="module" src="./tesseract.js?v=loading-pace-26" onerror="document.documentElement.classList.remove('is-loading')"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=shared-timeline-10">
+  <script type="module" src="./assets/scripts/screen-intro.js"></script>
+  <script type="module" src="./assets/scripts/crt-init.js?v=shared-timeline-10"></script>
+  <script type="module" src="./assets/scripts/tesseract.js?v=shared-timeline-10" onerror="document.documentElement.classList.remove('is-loading')"></script>
 </head>
 <body>
+  <div id="crt-power" aria-hidden="true" inert></div>
+  <div id="crt-startup">
+  <div id="crt-screen">
+  <div id="crt-glass">
   <canvas id="render-backdrop" aria-hidden="true"></canvas>
+  <div id="page-scroll" tabindex="-1">
   <main class="page">
     <div class="terminal-window portfolio-window">
       <div class="window-titlebar" aria-hidden="true"><span class="window-title">~/info</span></div>
@@ -24,7 +31,7 @@
     <header class="intro">
       <div class="intro-main">
         <h1 class="ascii-name" aria-label="Eric Sun"><canvas id="ascii-name-canvas" aria-hidden="true" hidden></canvas><span class="name-fallback" aria-hidden="true">ERIC SUN</span></h1>
-        <p class="contact-line"><a href="mailto:ericsun@seas.upenn.edu">Email</a> <a href="https://github.com/therealericsun" target="_blank" rel="noopener noreferrer">GitHub</a> <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank" rel="noopener noreferrer">LinkedIn</a> <a href="./Eric_Sun_Resume.pdf" download>Resume</a></p>
+        <p class="contact-line" data-crt-align><a href="mailto:ericsun@seas.upenn.edu">Email</a> <a href="https://github.com/therealericsun" target="_blank" rel="noopener noreferrer">GitHub</a> <a href="https://www.linkedin.com/in/eric-sun-a323461a0/" target="_blank" rel="noopener noreferrer">LinkedIn</a> <a href="../Eric_Sun_Resume.pdf" download>Resume</a></p>
         <p class="tagline">Quantitative developer based in New York interested in machine learning and numeric simulations.</p>
       </div>
     </header>
@@ -82,6 +89,9 @@
     </figure>
     <footer>© 2026 Eric Sun</footer>
   </main>
+  </div>
+  </div>
+  <div id="settings-surface" class="settings-surface">
   <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="4D renderer settings">
     <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-title">~/render/settings</span></button>
     <div id="drawer-content" class="controls-body drawer-content" inert aria-hidden="true">
@@ -107,6 +117,7 @@
       <section class="settings-section" aria-labelledby="settings-heading">
         <div class="panel-heading"><span id="settings-heading">settings</span></div>
         <div class="extra-settings">
+        <div class="crt-setting"><label class="checkbox-setting" for="crt-effect"><input id="crt-effect" type="checkbox" checked><span>CRT effect</span></label><a class="repo-link" href="https://github.com/therealericsun/crt-effect" target="_blank" rel="noopener noreferrer">See Repo</a></div>
         <label class="setting" for="projection-depth"><span class="setting-heading"><span>4D perspective</span><output id="value-depth" for="projection-depth">5.0</output></span><input id="projection-depth" type="range" min="3" max="7" step="0.1" value="5.0" aria-label="4D perspective distance"></label>
         <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">60%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="60" aria-label="Face texture amount"></label>
         <label class="setting" for="edge-width"><span class="setting-heading"><span>edge width</span><output id="value-edge-width" for="edge-width">1.0×</output></span><input id="edge-width" type="range" min="0.5" max="1.5" step="0.1" value="1" aria-label="Edge width"></label>
@@ -119,5 +130,8 @@
 
     </div>
   </aside>
+  </div>
+  </div>
+  </div>
 </body>
 </html>

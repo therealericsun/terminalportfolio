@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vertices, edges, faces, rotate, projectVertices, camera, illumination, rotationPlanes, initialOrientation, advanceOrientation, projectOrientation, orientationAxes } from '../tesseract-math.js';
+import { vertices, edges, faces, rotate, projectVertices, camera, illumination, rotationPlanes, initialOrientation, advanceOrientation, projectOrientation, orientationAxes } from '../public/tesseract/assets/scripts/tesseract-math.js';
 
 test('tesseract topology has 16 vertices, 32 edges and 24 square faces', () => {
   assert.equal(new Set(vertices.map(v => v.join(','))).size, 16);

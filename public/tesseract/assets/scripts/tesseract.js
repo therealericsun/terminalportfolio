@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, AsciiFrame, loadingTimeScale } from './intro.js?v=loading-pace-26';
+import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=shared-timeline-9';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -9,6 +9,41 @@ const ctx = canvas.getContext('2d');
 const backdrop = document.querySelector('#render-backdrop');
 const backdropCtx = backdrop.getContext('2d');
 const scene = document.querySelector('#tesseract-scene');
+const screen = document.querySelector('#crt-screen');
+const glass = document.querySelector('#crt-glass');
+const pageScroll = document.querySelector('#page-scroll');
+const scenePosition = document.createComment('mobile scene position');
+scene.before(scenePosition);
+const scenePlaceholder = document.createElement('div');
+scenePlaceholder.id = 'tesseract-position';
+scenePlaceholder.setAttribute('aria-hidden', 'true');
+scenePosition.after(scenePlaceholder);
+const mobileLayout = matchMedia('(max-width: 900px)');
+function positionArtwork() {
+  if (!mobileLayout.matches) return;
+  const bounds = scenePlaceholder.getBoundingClientRect();
+  const viewport = screen.getBoundingClientRect();
+  Object.assign(scene.style, {
+    position: 'absolute', left: `${bounds.left - viewport.left}px`, right: 'auto',
+    top: `${bounds.top - viewport.top}px`, width: `${bounds.width}px`, height: `${bounds.height}px`,
+    transform: 'none', margin: '0',
+  });
+}
+function placeScene() {
+  screen.append(scene);
+  if (mobileLayout.matches) positionArtwork();
+  else scene.removeAttribute('style');
+}
+// Native canvas drawing stays independent of the WebGL CRT compositor.
+screen.insertBefore(backdrop, glass);
+pageScroll.addEventListener('scroll', positionArtwork, { passive: true });
+new ResizeObserver(() => requestAnimationFrame(positionArtwork)).observe(scenePlaceholder);
+window.addEventListener('resize', positionArtwork, { passive: true });
+placeScene();
+mobileLayout.addEventListener('change', placeScene);
+const updateScreenSize = () => screen.style.setProperty('--screen-height', `${screen.clientHeight}px`);
+new ResizeObserver(updateScreenSize).observe(screen);
+updateScreenSize();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const setNameFontSize = initAsciiName();
 const entrance = new Entrance(document.querySelector('.page'), reduced.matches);
@@ -23,6 +58,7 @@ const faceRamp = ' .,:;+=*';
 // reference's ember → orange → gold → cream ramp using geometric brightness.
 const theme = getComputedStyle(document.documentElement);
 const palette = createAsciiPalette(theme);
+const crtCurvature = parseFloat(theme.getPropertyValue('--crt-curvature')) || 0;
 // Retain the directional highlights and deep shadows in the monochrome echo.
 const backdropPalette = palette.map((_, i) => {
   const gray = Math.round(12 + 228 * (i / (palette.length - 1)) ** 1.35);
@@ -42,6 +78,7 @@ const shapeForSeed = seed => seed.toLowerCase() === 'tesseract' ? tesseractShape
 const settings = { speed: 1, depth: 5, detail: .6, edgeWidth: 1, followMouse: true, seed: initialSeed };
 let shape = shapeForSeed(settings.seed);
 let shapeScale = framingScaleFor(shape.vertices);
+let axisEntrance;
 const updateOrientationIndicator = initOrientationIndicator();
 const seedInput = document.querySelector('#shape-seed');
 seedInput.value = settings.seed;
@@ -53,11 +90,9 @@ new AsciiFrame(drawer);
 const drawerEntrance = new Entrance(drawerToggle, reduced.matches, { duration: 1.3, delay: .45, temporary: true });
 const finishDrawerEntrance = () => {
   drawer.classList.remove('is-entering');
+  drawer.style.removeProperty('top');
   drawerEntrance.finish();
 };
-drawer.addEventListener('animationend', event => {
-  if (event.target === drawer && event.animationName === 'drawer-arrive') finishDrawerEntrance();
-});
 drawer.addEventListener('focusin', finishDrawerEntrance, { once: true });
 if (reduced.matches) finishDrawerEntrance();
 else drawer.classList.add('is-entering');
@@ -102,7 +137,6 @@ function initOrientationIndicator() {
     return { group, lines: group.querySelectorAll('line'), tip: group.querySelector('rect'),
       label: group.querySelector('text'), output: indicator.querySelector(`[data-facing="${axis}"]`) };
   });
-  let axisEntrance;
   reduced.addEventListener('change', () => { if (reduced.matches) axisEntrance?.finish(); });
   return () => {
     const frame = orientationAxes(orientation, settings.depth);
@@ -408,8 +442,14 @@ function draw() {
   for (const key of ['seed', 'shape', 'angles', 'intro', 'time']) backdrop.dataset[key] = canvas.dataset[key];
   updateOrientationIndicator();
   syncControls();
+  document.dispatchEvent(new Event('crt:frame'));
 }
 function syncControls() {
+  followMouseToggle.checked = settings.followMouse;
+  canvas.classList.toggle('is-following-mouse', settings.followMouse);
+  autoRotateToggle.checked = !paused;
+  // Hidden controls do not need DOM writes and repeated filter rasterization.
+  if (drawerContent.inert) return;
   for (const slider of sliders) {
     const plane = slider.dataset.plane;
     const value = plane ? orientation[plane] * 180 / Math.PI
@@ -425,17 +465,27 @@ function syncControls() {
     output.value = text;
     slider.setAttribute('aria-valuetext', text);
   }
-  followMouseToggle.checked = settings.followMouse;
-  canvas.classList.toggle('is-following-mouse', settings.followMouse);
-  autoRotateToggle.checked = !paused;
 }
 function tick(now) {
   frame = 0;
   if (document.hidden) { previous = 0; return; }
   applyMotionPreference();
+  if (document.documentElement.classList.contains('content-hold')) {
+    previous = 0; frame = requestAnimationFrame(tick); return;
+  }
   const dt = previous ? Math.min((now - previous) / 1000, .1) : 0;
   previous = now; accumulator += dt;
-  if (!entrance.finished) entrance.update(dt);
+  if (!entrance.finished) entrance.update();
+  if (axisEntrance && !axisEntrance.finished) axisEntrance.update();
+  if (!drawerEntrance.finished) {
+    drawerEntrance.update();
+  }
+  if (drawer.classList.contains('is-entering')) {
+    const progress = clamp((entranceTime() / loadingTimeScale - .72) / 1.12, 0, 1);
+    drawer.style.top = `${46 * (1 - progress) ** 3}px`;
+    document.dispatchEvent(new Event('crt:frame'));
+    if (progress === 1) finishDrawerEntrance();
+  }
   const canAnimate = !activeControl && (!dragging || settings.followMouse);
   if (canAnimate) {
     if (!reduced.matches) assemblyTime = Math.min(assemblyDuration, assemblyTime + dt * assemblyTempo);
@@ -451,7 +501,7 @@ function tick(now) {
   if (accumulator >= 1 / 30 || needsFinalFrame || scrollNeedsDraw) {
     draw(); accumulator %= 1 / 30; scrollNeedsDraw = false;
   }
-  if ((canAnimate && ((!paused && settings.speed > 0) || assemblyTime < assemblyDuration)) || !entrance.finished) frame = requestAnimationFrame(tick);
+  if ((canAnimate && ((!paused && settings.speed > 0) || assemblyTime < assemblyDuration)) || !entrance.finished || !drawerEntrance.finished || (axisEntrance && !axisEntrance.finished)) frame = requestAnimationFrame(tick);
   else previous = 0;
 }
 function start() {
@@ -465,28 +515,70 @@ function applyMotionPreference() {
 }
 reduced.addEventListener('change', () => { applyMotionPreference(); draw(); start(); });
 document.addEventListener('visibilitychange', () => { previous = 0; lastMouse = null; scrollTouch = null; start(); });
+let drawerMotion = 0;
+// Move normal-flow content inside a stationary filtered surface. This keeps
+// Safari’s displacement texture fixed throughout the drawer animation.
+function moveDrawer(from, to) {
+  cancelAnimationFrame(drawerMotion);
+  drawerMotion = 0;
+  drawerContent.style.removeProperty('visibility');
+  if (reduced.matches || document.hidden || Math.abs(to - from) < .5) {
+    drawer.style.removeProperty('margin-bottom');
+    return;
+  }
+  if (!drawer.classList.contains('is-open')) drawerContent.style.visibility = 'visible';
+  const began = performance.now();
+  const bezier = (t, a, b) => 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t * t * b + t ** 3;
+  const ease = x => {
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 12; i++) {
+      const t = (lo + hi) / 2;
+      if (bezier(t, .2, .2) < x) lo = t; else hi = t;
+    }
+    return bezier((lo + hi) / 2, .7, 1);
+  };
+  drawer.style.marginBottom = `${from}px`;
+  const step = now => {
+    const progress = reduced.matches || document.hidden ? 1 : Math.min(1, (now - began) / 240);
+    drawer.style.marginBottom = `${from + (to - from) * ease(progress)}px`;
+    if (progress === 1) { drawerMotion = 0; drawer.style.removeProperty('margin-bottom'); drawerContent.style.removeProperty('visibility'); }
+    document.dispatchEvent(new Event('crt:frame'));
+    if (progress < 1) drawerMotion = requestAnimationFrame(step);
+  };
+  drawerMotion = requestAnimationFrame(step);
+}
 function setDrawerOpen(open) {
   clearTimeout(hoverCloseTimer);
   finishDrawerEntrance();
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
+  const from = parseFloat(getComputedStyle(drawer).marginBottom);
+  drawer.style.removeProperty('margin-bottom');
   drawer.classList.toggle('is-open', open);
+  const to = parseFloat(getComputedStyle(drawer).marginBottom);
+  moveDrawer(from, to);
   drawerToggle.setAttribute('aria-expanded', String(open));
   drawerContent.inert = !open;
+  if (open) syncControls();
   drawerContent.setAttribute('aria-hidden', String(!open));
   document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
   document.body.classList.toggle('settings-open', open);
+  positionArtwork();
+  document.dispatchEvent(new Event('crt:frame'));
   if (open && matchMedia('(max-width: 900px)').matches) {
-    const area = innerHeight - drawer.getBoundingClientRect().height;
+    const area = screen.clientHeight - drawer.getBoundingClientRect().height;
     const bounds = scene.getBoundingClientRect();
-    window.scrollTo({
-      top: Math.max(0, scrollY + bounds.top - Math.max(12, (area - bounds.height) / 2)),
+    pageScroll.scrollTo({
+      top: Math.max(0, pageScroll.scrollTop + bounds.top - screen.getBoundingClientRect().top - Math.max(12, (area - bounds.height) / 2)),
       behavior: reduced.matches ? 'auto' : 'smooth',
     });
   }
 }
-new ResizeObserver(() => {
+const updateDrawerSize = () => {
+  drawer.style.setProperty('--drawer-height', `${drawer.offsetHeight}px`);
   if (drawer.classList.contains('is-open')) document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
-}).observe(drawer);
+};
+new ResizeObserver(updateDrawerSize).observe(drawer);
+updateDrawerSize();
 // Hover opens a temporary drawer on mouse/trackpad devices; touch keeps tap.
 const canHover = matchMedia('(hover: hover) and (pointer: fine)');
 function closeAfterHover() {
@@ -496,11 +588,12 @@ function closeAfterHover() {
     if (!drawer.matches(':hover') && !activeControl && !(keyboardNavigation && drawer.contains(document.activeElement))) setDrawerOpen(false);
   }, 180);
 }
-drawer.addEventListener('pointerenter', event => {
+drawerToggle.addEventListener('pointerenter', event => {
   if (event.pointerType !== 'mouse' || !canHover.matches) return;
   clearTimeout(hoverCloseTimer);
   if (!drawer.classList.contains('is-open')) setDrawerOpen(true);
 });
+drawer.addEventListener('pointerenter', () => clearTimeout(hoverCloseTimer));
 drawer.addEventListener('pointerleave', closeAfterHover);
 drawer.addEventListener('focusout', closeAfterHover);
 drawerToggle.addEventListener('click', () => {
@@ -512,7 +605,10 @@ document.addEventListener('pointerdown', () => { keyboardNavigation = false; }, 
 document.addEventListener('pointerup', closeAfterHover);
 document.addEventListener('keydown', event => {
   if (event.key === 'Tab') keyboardNavigation = true;
-  if (event.key === 'Escape' && drawer.classList.contains('is-open')) setDrawerOpen(false);
+  if (event.key === 'Escape' && drawer.classList.contains('is-open')) {
+    setDrawerOpen(false);
+    drawerToggle.focus({ preventScroll: true });
+  }
 });
 window.addEventListener('blur', () => {
   activeControl = null; dragging = null; previous = 0; lastMouse = null; scrollTouch = null;
@@ -529,11 +625,47 @@ for (const slider of sliders) {
     else settings.detail = value / 100;
     draw(); start();
   });
+  let pointerId = null, initialValue;
+  const setFromPointer = event => {
+    const bounds = slider.getBoundingClientRect();
+    let x = event.clientX;
+    if (!document.body.classList.contains('crt-disabled')) {
+      const view = screen.getBoundingClientRect();
+      const u = (event.clientX - view.left) / view.width * 2 - 1;
+      const v = (event.clientY - view.top) / view.height * 2 - 1;
+      x += crtCurvature * view.width * .5 * u * v * v;
+    }
+    const min = Number(slider.min), max = Number(slider.max), step = Number(slider.step) || 1;
+    const value = min + clamp((x - bounds.left) / bounds.width, 0, 1) * (max - min);
+    const snapped = Number((min + Math.round((value - min) / step) * step).toPrecision(12));
+    if (Number(slider.value) === snapped) return;
+    slider.value = String(snapped);
+    slider.dispatchEvent(new Event('input', { bubbles:true }));
+  };
   slider.addEventListener('pointerdown', event => {
+    if (!event.isPrimary || event.button !== 0) return;
+    // Own pointer dragging consistently; Safari's native range thumb loses its
+    // drag when the host captures the pointer. Keyboard/AX behavior stays native.
+    event.preventDefault();
+    pointerId = event.pointerId; initialValue = slider.value;
     activeControl = slider; assemblyTime = assemblyDuration;
-    slider.setPointerCapture(event.pointerId);
+    slider.focus({ preventScroll:true });
+    slider.setPointerCapture(pointerId);
+    setFromPointer(event);
   });
-  const release = () => { if (activeControl === slider) activeControl = null; previous = 0; start(); };
+  slider.addEventListener('pointermove', event => {
+    if (event.pointerId !== pointerId) return;
+    event.preventDefault(); setFromPointer(event);
+  });
+  const release = () => {
+    const captured = pointerId; pointerId = null;
+    if (captured !== null) {
+      if (slider.hasPointerCapture(captured)) slider.releasePointerCapture(captured);
+      if (slider.value !== initialValue) slider.dispatchEvent(new Event('change', { bubbles:true }));
+    }
+    if (activeControl === slider) activeControl = null;
+    previous = 0; start();
+  };
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture', 'blur']) slider.addEventListener(event, release);
   slider.addEventListener('keydown', event => {
     if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key)) {
@@ -631,9 +763,19 @@ function endDrag() { dragging = null; canvas.classList.remove('is-dragging'); st
 canvas.addEventListener('lostpointercapture', endDrag);
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
-new ResizeObserver(resize).observe(canvas);
+// Resizing the scene can change the shallower orientation panel's layout.
+// Defer those writes until after observer delivery to avoid a WebKit resize loop.
+function observeCanvasSize(element, callback) {
+  let pending = 0;
+  new ResizeObserver(() => {
+    if (!pending) pending = requestAnimationFrame(() => { pending = 0; callback(); });
+  }).observe(element);
+}
+observeCanvasSize(canvas, resize);
 // The viewport-sized backdrop keeps the shared animation visible on every scroll position.
-new ResizeObserver(resizeBackdrop).observe(backdrop);
+observeCanvasSize(backdrop, resizeBackdrop);
 syncControls(); resizeBackdrop(); resize(); document.fonts.ready.then(resize); start();
 // Name geometry, canvas sizes and entrance states are ready for the first paint.
+document.dispatchEvent(new Event('crt:ready'));
 document.documentElement.classList.remove('is-loading');
+document.dispatchEvent(new Event('crt:layout'));
