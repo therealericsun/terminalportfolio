@@ -2,6 +2,8 @@
 
 A dependency-free portfolio with an interactive ASCII 4D polytope and CRT effects.
 
+[Live site](https://ericsun.net)
+
 ![Portfolio with CRT effects](docs/images/portfolio.jpg)
 
 ```sh
