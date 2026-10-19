@@ -1,4 +1,4 @@
-import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.3';
+import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.5';
 
 const checkbox = document.querySelector('#crt-effect');
 const displayControls = [...document.querySelectorAll('input[data-crt-option]')];
@@ -48,7 +48,7 @@ function initializeCRT() {
     const crt = createWebGLCRT(screen, {
       aperture: true,
       sources: [document.querySelector('#render-backdrop'), document.querySelector('#tesseract')],
-      curvature, ...displaySettings, mask: .015, vignette: .45,
+      curvature, ...displaySettings, scanlines: 0, vignette: .45,
       enabled,
     });
     canvasEffect = crt;

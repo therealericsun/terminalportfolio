@@ -23,10 +23,10 @@
     document.addEventListener('crt:contentstart', () => clearTimeout(startupDeadline), { once:true });
     window.addEventListener('error', recoverStartup, true);
   </script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-16">
-  <script type="module" src="./assets/scripts/screen-intro.js?v=startup-16"></script>
-  <script type="module" src="./assets/scripts/crt-init.js?v=startup-16"></script>
-  <script type="module" src="./assets/scripts/tesseract.js?v=startup-16"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-17">
+  <script type="module" src="./assets/scripts/screen-intro.js?v=startup-17"></script>
+  <script type="module" src="./assets/scripts/crt-init.js?v=startup-17"></script>
+  <script type="module" src="./assets/scripts/tesseract.js?v=startup-17"></script>
 </head>
 <body>
   <div id="screen-power" aria-hidden="true" inert></div>
@@ -131,7 +131,7 @@
         <label class="setting" for="projection-depth"><span class="setting-heading"><span>perspective</span><output id="value-depth" for="projection-depth">5.0</output></span><input id="projection-depth" type="range" min="3" max="7" step="0.1" value="5.0" aria-label="4D perspective distance"></label>
         <label class="setting" for="display-grain"><span class="setting-heading"><span>grain</span><output for="display-grain">1.2%</output></span><input id="display-grain" data-crt-option="grain" type="range" min="0" max="10" step="0.1" value="1.2" aria-label="CRT grain"></label>
         <label class="setting" for="face-detail"><span class="setting-heading"><span>face texture</span><output id="value-detail" for="face-detail">60%</output></span><input id="face-detail" type="range" min="0" max="100" step="1" value="60" aria-label="Face texture amount"></label>
-        <label class="setting" for="display-scanlines"><span class="setting-heading"><span>scanlines</span><output for="display-scanlines">5.5%</output></span><input id="display-scanlines" data-crt-option="scanlines" type="range" min="0" max="40" step="0.1" value="5.5" aria-label="CRT scanlines"></label>
+        <label class="setting" for="display-mask"><span class="setting-heading"><span>phosphor mask</span><output for="display-mask">8%</output></span><input id="display-mask" data-crt-option="mask" type="range" min="0" max="40" step="0.1" value="8" aria-label="CRT phosphor mask"></label>
         <label class="setting" for="edge-width"><span class="setting-heading"><span>edge width</span><output id="value-edge-width" for="edge-width">1.0×</output></span><input id="edge-width" type="range" min="0.5" max="1.5" step="0.1" value="1" aria-label="Edge width"></label>
         <label class="setting" for="display-glow"><span class="setting-heading"><span>glow</span><output for="display-glow">3.5%</output></span><input id="display-glow" data-crt-option="glow" type="range" min="0" max="40" step="0.1" value="3.5" aria-label="CRT glow"></label>
         </div>

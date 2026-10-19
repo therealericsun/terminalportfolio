@@ -153,11 +153,14 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         return {
           ...Object.fromEntries(['Glow','Curvature'].map(name => [name, gl.getUniform(program, gl.getUniformLocation(program, 'u' + name))])),
           Grain:Number(document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"] [data-crt-grain]').style.opacity),
+          Mask:Number(document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"]').children[1].style.opacity),
           Scanlines:Number(document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"] [data-crt-scanlines]').style.opacity),
         };
       });
       const beforeEffects = await effectUniforms();
-      for (const [id, uniform] of [['display-grain','Grain'], ['display-scanlines','Scanlines'], ['display-glow','Glow']]) {
+      assert.equal(beforeEffects.Scanlines, 0, 'phosphor mask replaces scanlines');
+      assert.ok(Math.abs(beforeEffects.Mask - .08) < .00001, 'phosphor mask has a visible default');
+      for (const [id, uniform] of [['display-grain','Grain'], ['display-mask','Mask'], ['display-glow','Glow']]) {
         const control = page.locator('#' + id);
         const initial = Number(await control.inputValue());
         await control.focus(); await page.keyboard.press('ArrowRight');
