@@ -3,6 +3,8 @@
 Plain HTML, CSS and JavaScript. Page assets live in `public/tesseract/assets/`. Run `npm run dev` from the repository root, then open <http://localhost:4321>.
 
 - Drag the shape, follow the pointer, or use the settings drawer to change rotation, speed, perspective and shading.
+- Display pairs the scene controls with CRT grain, scanline and glow sliders; curvature stays fixed.
+- One texture overlay covers the artwork and native panels; glow also applies to frame graphics and HTML text.
 - Enter a seed to reproduce a shape; `tesseract` restores the default.
 - CRT defaults off in the mobile layout (900px and narrower); a saved toggle preference takes priority. Reduced motion skips the startup and freezes animation.
 - `tesseract.js` renders the scene, `tesseract-math.js` handles projection, and `polytope.js` generates seeded shapes.

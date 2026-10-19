@@ -1,6 +1,32 @@
-import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.2';
+import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.3';
 
 const checkbox = document.querySelector('#crt-effect');
+const displayControls = [...document.querySelectorAll('input[data-crt-option]')];
+const displaySettings = Object.fromEntries(displayControls.map(input => [input.dataset.crtOption, Number(input.value) / 100]));
+let canvasEffect;
+const graphicsEffects = [];
+const screen = document.querySelector('#screen-viewport');
+screen.style.setProperty('--crt-glow', displaySettings.glow);
+for (const input of displayControls) {
+  const sync = () => {
+    const value = Number(input.value);
+    const text = `${Number(value.toFixed(1))}%`;
+    input.parentElement.querySelector('output').value = text;
+    input.setAttribute('aria-valuetext', text);
+    input.style.setProperty('--fill', `${(value - Number(input.min)) / (Number(input.max) - Number(input.min)) * 100}%`);
+  };
+  sync();
+  input.addEventListener('input', () => {
+    if (input.disabled) return;
+    sync();
+    const key = input.dataset.crtOption;
+    displaySettings[key] = Number(input.value) / 100;
+    if (key === 'glow') {
+      screen.style.setProperty('--crt-glow', displaySettings.glow);
+      for (const effect of graphicsEffects) effect.update({ glow:displaySettings.glow });
+    } else canvasEffect?.update({ [key]:displaySettings[key] });
+  });
+}
 const storageKey = 'tesseract:crt-effect';
 let enabled = !matchMedia('(max-width: 900px)').matches;
 try {
@@ -9,19 +35,24 @@ try {
 } catch { /* Keep the viewport default when storage is unavailable. */ }
 checkbox.checked = enabled;
 document.body.classList.toggle('crt-disabled', !enabled);
+function syncDisplayEnabled() {
+  for (const input of displayControls) input.disabled = !checkbox.checked || checkbox.disabled;
+}
+syncDisplayEnabled();
 
 const effects = [];
 const detailLayers = [];
 function initializeCRT() {
   try {
-    const screen = document.querySelector('#screen-viewport');
     const curvature = parseFloat(getComputedStyle(screen).getPropertyValue('--crt-curvature')) || 0;
     const crt = createWebGLCRT(screen, {
       aperture: true,
       sources: [document.querySelector('#render-backdrop'), document.querySelector('#tesseract')],
-      curvature, grain: .012, scanlines: .055, mask: .015, vignette: .45, glow: .035,
+      curvature, ...displaySettings, mask: .015, vignette: .45,
       enabled,
     });
+    canvasEffect = crt;
+    graphicsEffects.push(crt);
     effects.push(crt);
     const detail = (id, zIndex, sources) => {
       const layer = document.createElement('div');
@@ -29,7 +60,8 @@ function initializeCRT() {
       layer.style.cssText = `position:absolute;inset:0;z-index:${zIndex};pointer-events:none`;
       screen.append(layer); detailLayers.push(layer);
       const gpu = createWebGLCRT(layer, { sources, enabled, curvature,
-        grain:0, scanlines:0, mask:0, vignette:0, glow:0 });
+        grain:0, scanlines:0, mask:0, vignette:0, glow:displaySettings.glow });
+      graphicsEffects.push(gpu);
       effects.push(gpu); return gpu;
     };
     const frames = [...document.querySelectorAll('canvas[data-crt-frame]')];
@@ -71,13 +103,17 @@ function initializeCRT() {
     checkbox.addEventListener('change', () => {
       document.body.classList.toggle('crt-disabled', !checkbox.checked);
       for (const effect of effects) effect.setEnabled(checkbox.checked);
+      syncDisplayEnabled();
       try { localStorage.setItem(storageKey, String(checkbox.checked)); } catch { /* Preference remains active for this visit. */ }
     });
   } catch (error) {
+    canvasEffect = undefined;
+    graphicsEffects.length = 0;
     for (const effect of effects.reverse()) effect.destroy();
     for (const layer of detailLayers) layer.remove();
     checkbox.checked = false;
     checkbox.disabled = true;
+    syncDisplayEnabled();
     document.body.classList.add('crt-disabled');
     console.warn('CRT effect could not initialize.', error);
   }

@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-15';
+import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-16';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -451,6 +451,7 @@ function syncControls() {
   // Hidden controls do not need DOM writes and repeated filter rasterization.
   if (drawerContent.inert) return;
   for (const slider of sliders) {
+    if (slider.dataset.crtOption) continue;
     const plane = slider.dataset.plane;
     const value = plane ? orientation[plane] * 180 / Math.PI
       : slider.id === 'rotation-speed' ? settings.speed
@@ -617,6 +618,7 @@ window.addEventListener('blur', () => {
 });
 for (const slider of sliders) {
   slider.addEventListener('input', () => {
+    if (slider.dataset.crtOption) return;
     assemblyTime = assemblyDuration;
     const value = Number(slider.value);
     if (slider.dataset.plane) orientation[slider.dataset.plane] = value * Math.PI / 180;
@@ -644,7 +646,7 @@ for (const slider of sliders) {
     slider.dispatchEvent(new Event('input', { bubbles:true }));
   };
   slider.addEventListener('pointerdown', event => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (slider.disabled || !event.isPrimary || event.button !== 0) return;
     // Own pointer dragging consistently; Safari's native range thumb loses its
     // drag when the host captures the pointer. Keyboard/AX behavior stays native.
     event.preventDefault();
@@ -655,7 +657,7 @@ for (const slider of sliders) {
     setFromPointer(event);
   });
   slider.addEventListener('pointermove', event => {
-    if (event.pointerId !== pointerId) return;
+    if (slider.disabled || event.pointerId !== pointerId) return;
     event.preventDefault(); setFromPointer(event);
   });
   const release = () => {

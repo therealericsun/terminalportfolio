@@ -92,6 +92,7 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         assert.equal(await page.locator(selector).evaluate(e => getComputedStyle(e).backgroundImage), 'none');
       }
       assert.equal(await page.locator('#crt-effect').isChecked(), !mobile, 'CRT defaults off in the mobile layout');
+      assert.equal(await page.locator('input[data-crt-option]:disabled').count(), mobile ? 3 : 0, 'CRT sliders follow the initial enabled state');
       assert.equal(await page.locator('body').evaluate(e => e.classList.contains('crt-disabled')), mobile);
       assert.equal(await page.locator('#screen-page-details canvas[data-crt-renderer]').count(), 1);
       assert.equal(await page.locator('#screen-menu-details canvas[data-crt-renderer]').count(), 1);
@@ -134,8 +135,39 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       }
       assert.equal(await page.locator('#ascii-name-canvas').evaluate(e => getComputedStyle(e).opacity), '0');
       assert.notEqual(await page.locator('#settings-surface').evaluate(e => getComputedStyle(e).filter), 'none');
-      const repo = page.getByRole('link', { name: 'See Repo', exact: true });
+      const repo = page.getByRole('link', { name: 'see repo', exact: true });
       assert.equal(await repo.getAttribute('href'), 'https://github.com/therealericsun/crt-effect');
+      assert.equal(await page.locator('#display-heading').textContent(), 'display');
+      assert.equal(await page.locator('.settings-section>.panel-heading #crt-effect').count(), 1, 'CRT toggle sits in the display heading');
+      assert.equal(await page.locator('.display-controls input[type=range]').count(), 6, 'display has three pairs of sliders');
+      assert.deepEqual(await page.locator('input[data-crt-option]').evaluateAll(inputs => inputs.map(input => Number(input.max))), [10,40,40], 'CRT ranges allow useful adjustments without excessive sensitivity');
+      assert.ok(await page.evaluate(() => Number(getComputedStyle(document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"]')).zIndex) > Number(getComputedStyle(document.querySelector('#settings-surface')).zIndex)), 'texture overlay covers the native panels');
+      assert.equal(await page.locator('input[data-crt-option]:disabled').count(), 0, 'enabled CRT exposes its controls');
+      const headingX = (await page.locator('#crt-effect').boundingBox()).x;
+      assert.ok(Math.abs(headingX - (await page.locator('#display-grain').boundingBox()).x) < 1, 'CRT checkbox aligns above the CRT slider column');
+      const grid = await page.locator('.display-controls input').evaluateAll(inputs => inputs.map(input => ({ x:input.getBoundingClientRect().x, y:input.getBoundingClientRect().y })));
+      for (let i = 0; i < 6; i += 2) assert.ok(Math.abs(grid[i].y - grid[i + 1].y) < 1 && grid[i].x < grid[i + 1].x, 'display sliders form aligned rows');
+      const effectUniforms = () => page.evaluate(() => {
+        const canvas = document.querySelector('#screen-viewport>canvas[data-crt-renderer]');
+        const gl = canvas.getContext(canvas.dataset.crtRenderer), program = gl.getParameter(gl.CURRENT_PROGRAM);
+        return {
+          ...Object.fromEntries(['Glow','Curvature'].map(name => [name, gl.getUniform(program, gl.getUniformLocation(program, 'u' + name))])),
+          Grain:Number(document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"] [data-crt-grain]').style.opacity),
+          Scanlines:Number(document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"] [data-crt-scanlines]').style.opacity),
+        };
+      });
+      const beforeEffects = await effectUniforms();
+      for (const [id, uniform] of [['display-grain','Grain'], ['display-scanlines','Scanlines'], ['display-glow','Glow']]) {
+        const control = page.locator('#' + id);
+        const initial = Number(await control.inputValue());
+        await control.focus(); await page.keyboard.press('ArrowRight');
+        const value = Number(await control.inputValue());
+        assert.ok(value > initial, 'CRT setting responds to keyboard input');
+        assert.ok(Math.abs((await effectUniforms())[uniform] - value / 100) < .00001, 'CRT slider updates the GPU setting');
+      }
+      assert.equal(Number(await page.locator('#face-detail').inputValue()), 60, 'CRT sliders do not alter face texture');
+      assert.equal((await effectUniforms()).Curvature, beforeEffects.Curvature, 'CRT controls keep curvature fixed');
+      assert.notEqual(await page.locator('.tagline').evaluate(e => getComputedStyle(e).textShadow), 'none', 'HTML text shares the glow treatment');
       await page.locator('#projection-depth').focus();
       await page.keyboard.press('ArrowRight');
       assert.equal(await page.locator('#projection-depth').inputValue(), '5.1');
@@ -159,8 +191,12 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       for (let i = 0; i < 4; i++) {
         await page.locator('#crt-effect').focus();
         await page.keyboard.press('Space');
+        assert.equal(await page.locator('input[data-crt-option]:disabled').count(), (await page.locator('#crt-effect').isChecked()) ? 0 : 3, 'CRT toggle enables and disables its three sliders');
+        assert.equal(await page.locator('#face-detail').isEnabled(), true, 'scene controls stay enabled');
       }
-      await page.waitForTimeout(100);
+      // Toggling CRT changes viewport insets and resizes the frame canvases.
+      // Let those resize uploads settle before measuring drawer-only motion.
+      await page.waitForTimeout(300);
       await page.evaluate(() => Object.assign(window.drawerChecks, { frames:0, maxDrift:0, uploads:0 }));
       await page.keyboard.press('Escape');
       await page.waitForTimeout(280);
