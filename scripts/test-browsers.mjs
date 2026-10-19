@@ -49,7 +49,9 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
             if (panel?.style.backgroundSize) {
               const height = parseFloat(panel.style.backgroundSize.split(' ')[1]);
               if (height !== window.startup.fills.at(-1)?.height) {
-                window.startup.fills.push({ height, opacity:getComputedStyle(panel).opacity });
+                const bottom = parseFloat(panel.style.backgroundPosition.split(',')[1]?.match(/[\d.]+px/)?.[0]);
+                window.startup.fills.push({ height, bottom, panelHeight:panel.clientHeight,
+                  layers:panel.style.backgroundImage.split('linear-gradient').length - 1, opacity:getComputedStyle(panel).opacity });
               }
             }
             if (!window.startup.frame && document.querySelector('.portfolio-window')?.dataset.frame === 'complete') {
@@ -76,6 +78,8 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.ok(Math.max(...startup.openingHeights) - Math.min(...startup.openingHeights) < 1, 'opening reveals a stable CRT picture without rescaling its geometry');
       assert.ok(startup.fills.length > 8, 'panel background fills in multiple terminal rows');
       assert.ok(startup.fills.every((fill, i) => fill.opacity === '1' && (!i || fill.height >= startup.fills[i - 1].height)), 'row fill advances without fading');
+      assert.ok(startup.fills.every(fill => fill.layers === 2 && Math.abs(fill.bottom + fill.height - fill.panelHeight) < .01), 'equal background bands advance from both edges');
+      assert.ok(Math.abs(startup.fills.at(-1).height * 2 - startup.fills.at(-1).panelHeight) < .01, 'both bands meet at the center before text appears');
       assert.ok(startup.content - startup.opened >= 980, 'one-second pause after screen opening');
       const reveal = i => startup.reveals.find(item => item.i === i)?.ms ?? Infinity;
       // Preserve Firefox’s sequence; a slow display frame may reveal adjacent steps together.

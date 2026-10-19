@@ -19,12 +19,13 @@ document.addEventListener('visibilitychange', () => {
 });
 const revealDuration = .01 * loadingTimeScale;
 const framePause = .22;
-function rasterHeight(elapsed, sequence, height, cellHeight) {
-  if (!sequence || !Number.isFinite(elapsed)) return height;
+function rasterDepth(elapsed, sequence, height, cellHeight) {
+  const half = height / 2;
+  if (!sequence || !Number.isFinite(elapsed)) return half;
   const { duration, delay } = sequence;
   const progress = Math.max(0, Math.min(1, (elapsed - delay - duration * .12) / (duration * .54)));
   const row = Math.max(2, Math.min(cellHeight, height / 24));
-  return progress === 1 ? height : Math.floor(height * progress / row) * row;
+  return progress === 1 ? half : Math.floor(half * progress / row) * row;
 }
 const contentPhase = group => group.matches('.intro') ? .43 : group.matches('.experience') ? .52
   : group.matches('.education-group') ? .59 : group.matches('.skills') ? .64
@@ -139,7 +140,10 @@ export class AsciiFrame {
     const ctx = this.context;
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = style.getPropertyValue('--window-titlebar-bg').trim();
-    ctx.fillRect(0, 0, width, Math.min(headerHeight, rasterHeight(elapsed, this.sequence, height, cellHeight)));
+    const depth = rasterDepth(elapsed, this.sequence, height, cellHeight);
+    ctx.fillRect(0, 0, width, Math.min(headerHeight, depth));
+    const bottomStart = height - depth;
+    if (bottomStart < headerHeight) ctx.fillRect(0, bottomStart, width, headerHeight - bottomStart);
     ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const point of this.points) {
       const time = elapsed - delay - duration * point.phase;
@@ -183,19 +187,23 @@ export class Entrance {
     this.frame.classList.add('assembly-frame');
     this.panel.classList.add('is-assembling');
     this.panel.dataset.entrance = 'opening';
-    // Paint opaque terminal rows into a stationary background; no fade or
+    // Paint opaque terminal rows inward from both edges; no fade or
     // transformed child layer that could escape Safari's shared CRT filter.
     Object.assign(this.backgroundHost.style, {
-      backgroundColor:'transparent', backgroundImage:'linear-gradient(var(--window-bg),var(--window-bg))',
-      backgroundRepeat:'no-repeat', backgroundPosition:'left top',
+      backgroundColor:'transparent', backgroundImage:'linear-gradient(var(--window-bg),var(--window-bg)),linear-gradient(var(--window-bg),var(--window-bg))',
+      backgroundRepeat:'no-repeat',
     });
     this.paint(0);
     this.panel.addEventListener('focusin', this.onFocus, { once:true });
   }
   paint(elapsed) {
     const { height, cellHeight } = this.ascii.geometry;
-    const size = `100% ${rasterHeight(elapsed, this.sequence, height, cellHeight)}px`;
+    const depth = rasterDepth(elapsed, this.sequence, height, cellHeight);
+    const size = `100% ${depth}px`;
     if (this.backgroundHost.style.backgroundSize !== size) this.backgroundHost.style.backgroundSize = size;
+    // Use the animated panel's bottom, including the drawer's visible handle.
+    const position = `left top, left ${height - depth}px`;
+    if (this.backgroundHost.style.backgroundPosition !== position) this.backgroundHost.style.backgroundPosition = position;
     this.ascii.paint(elapsed);
   }
   update() {
