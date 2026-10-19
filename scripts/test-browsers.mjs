@@ -15,6 +15,16 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.addInitScript(() => {
+        // EasyList treats styled crt-* divs as Criteo ads. Keep this rule active
+        // throughout startup, resizing and CRT toggling to catch regressions.
+        const hiding = document.createElement('style');
+        hiding.textContent = 'div[id^="crt-"][style]{display:none!important}';
+        const attach = () => {
+          if (!document.documentElement) return;
+          document.documentElement.append(hiding); observer.disconnect();
+        };
+        const observer = new MutationObserver(attach);
+        observer.observe(document, { childList:true, subtree:true }); attach();
         window.startup = { reveals: [] };
         let booting = false;
         new MutationObserver(() => {
@@ -43,6 +53,9 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       });
       await page.goto(url);
       await page.waitForFunction(() => document.querySelector('.portfolio-window')?.dataset.entrance === 'complete');
+      const screen = await page.locator('#screen-viewport').boundingBox();
+      assert.ok(screen?.width > 300 && screen?.height > 500, 'ad-block cosmetic rules must not collapse the viewport');
+      assert.equal(await page.getByRole('link', { name:'GitHub', exact:true }).isVisible(), true);
       const startup = await page.evaluate(() => window.startup);
       assert.ok(startup.content - startup.opened >= 980, 'one-second pause after screen opening');
       const reveal = i => startup.reveals.find(item => item.i === i)?.ms ?? Infinity;
@@ -57,8 +70,8 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       }
       assert.equal(await page.locator('#crt-effect').isChecked(), !mobile, 'CRT defaults off in the mobile layout');
       assert.equal(await page.locator('body').evaluate(e => e.classList.contains('crt-disabled')), mobile);
-      assert.equal(await page.locator('#crt-page-details canvas[data-crt-renderer]').count(), 1);
-      assert.equal(await page.locator('#crt-menu-details canvas[data-crt-renderer]').count(), 1);
+      assert.equal(await page.locator('#screen-page-details canvas[data-crt-renderer]').count(), 1);
+      assert.equal(await page.locator('#screen-menu-details canvas[data-crt-renderer]').count(), 1);
       await page.keyboard.press('Tab');
       await page.locator('#drawer-toggle').focus();
       await page.keyboard.press('Enter');

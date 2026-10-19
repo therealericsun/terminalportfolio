@@ -16,23 +16,23 @@
       root.classList.remove('is-loading', 'crt-booting', 'crt-powering', 'content-hold');
       document.dispatchEvent(new Event('crt:contentstart'));
       document.dispatchEvent(new Event('crt:layout'));
-      document.dispatchEvent(new Event('crt:frame'));
+      document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
     };
     // A failed/blocked module must not leave the page behind the black gate.
     const startupDeadline = setTimeout(recoverStartup, 10000);
     document.addEventListener('crt:contentstart', () => clearTimeout(startupDeadline), { once:true });
     window.addEventListener('error', recoverStartup, true);
   </script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-11">
-  <script type="module" src="./assets/scripts/screen-intro.js?v=startup-11"></script>
-  <script type="module" src="./assets/scripts/crt-init.js?v=startup-11"></script>
-  <script type="module" src="./assets/scripts/tesseract.js?v=startup-11"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-12">
+  <script type="module" src="./assets/scripts/screen-intro.js?v=startup-12"></script>
+  <script type="module" src="./assets/scripts/crt-init.js?v=startup-12"></script>
+  <script type="module" src="./assets/scripts/tesseract.js?v=startup-12"></script>
 </head>
 <body>
-  <div id="crt-power" aria-hidden="true" inert></div>
-  <div id="crt-startup">
-  <div id="crt-screen">
-  <div id="crt-glass">
+  <div id="screen-power" aria-hidden="true" inert></div>
+  <div id="screen-startup">
+  <div id="screen-viewport">
+  <div id="screen-glass">
   <canvas id="render-backdrop" aria-hidden="true"></canvas>
   <div id="page-scroll" tabindex="-1">
   <main class="page">

@@ -96,7 +96,7 @@ export class AsciiFrame {
         }
       }
       this.header = panel.matches('.drawer-toggle') ? panel.querySelector('.window-title') : titlebar;
-      this.paintKey = ''; this.paint(this.elapsed ?? Infinity);
+      this.paintKey = ''; this.canvasKey = ''; this.paint(this.elapsed ?? Infinity);
     };
     this.resize();
     this.observer = new ResizeObserver(this.resize);
@@ -115,13 +115,20 @@ export class AsciiFrame {
     const animated = Number.isFinite(elapsed) && this.sequence;
     const textStart = delay + duration * .70 + framePause;
     this.panel.dataset.frame = !animated || elapsed >= delay + duration * .70 ? 'complete' : 'tracing';
+    let visibilityChanged = false;
     for (const reveal of this.reveals) {
       const visible = !animated || elapsed >= textStart + duration * (reveal.phase - .43) + revealDuration;
       const value = visible ? 'visible' : 'hidden';
-      if (reveal.node.style.visibility !== value) reveal.node.style.visibility = value;
+      if (reveal.node.style.visibility !== value) { reveal.node.style.visibility = value; visibilityChanged = true; }
     }
     const headerVisible = !animated || elapsed >= textStart;
     if (this.header) this.header.style.visibility = headerVisible ? 'visible' : 'hidden';
+    const canvasKey = this.panel.dataset.frame === 'tracing' ? key : headerVisible ? 'settled-title' : 'settled-frame';
+    if (canvasKey === this.canvasKey) {
+      if (visibilityChanged) document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+      return;
+    }
+    this.canvasKey = canvasKey;
     const ctx = this.context;
     ctx.clearRect(0, 0, width, height);
     if (!animated || elapsed >= delay + duration * .35) {
@@ -143,11 +150,12 @@ export class AsciiFrame {
       ctx.fillStyle = style.getPropertyValue('--muted').trim();
       ctx.fillText(title.textContent.trim(), left + cellWidth * 2, titleY);
     }
-    document.dispatchEvent(new Event('crt:frame'));
+    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
   }
   remove() {
     this.observer.disconnect(); this.element.remove();
     this.header?.style.removeProperty('visibility');
+    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
   }
 }
 

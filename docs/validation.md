@@ -1,7 +1,7 @@
 # Verification · 2026-10-18
 
 - Website: syntax/reference checks, 12 geometry/shape tests and the static build pass. Six browser runs cover Chromium 156, Firefox 157 and WebKit 27.2 at desktop and 2× phone sizes.
-- CRT library: three geometry tests and 78 browser checks cover SVG/WebGL curvature, shared coordinates, source visibility, native interaction, resizing, scrolling, context recovery and complete teardown.
+- CRT library: three geometry tests and 90 browser checks cover SVG/WebGL curvature, shared coordinates, source visibility, native interaction, resizing, scrolling, context recovery and complete teardown.
 - Startup uses one JavaScript presentation clock, preserving Firefox’s reveal order across engines. Checks enforce the one-second pause after screen opening and a 220ms pause between completed frames and their text. Reduced motion skips startup; background tabs pause animation. The screen expansion uses eased, monotonic scaling; frame tracing uses 60Hz presentation steps with short glyph fades. The extra colored startup line is removed.
 - ASCII artwork, names and frames use shared-screen WebGL passes. Native text and controls use the same viewport displacement on stationary surfaces. The drawer moves in normal flow; its map remains unchanged during expansion. Pixel checks verify curvature during movement and on the name. Frames are painted once, eliminating Safari’s duplicate bottom edges.
 - Browser checks cover continuous pointer dragging, native keyboard controls, repeated CRT toggles, Escape focus restoration, the repository link and error-free startup. Production checks also cover scrolling, missing assets and rendering without JavaScript.
@@ -9,4 +9,6 @@
 - Firefox measured roughly 26 rendered frames/sec at 1440×1000 with 2× density, versus roughly 11 with the former full-page SVG pass. Hardware affects results. The background copy remains because removing it alone did not resolve the bottleneck.
 - Inactive Astro code, models, demos, images and fonts were removed. Assets live under `public/tesseract/assets/`; there are no website npm dependencies. The former Astro build failed on missing `src/scripts/transformer.ts`; the active static build passes.
 
-Blocked startup-module and stalled-startup checks verify that the portfolio becomes visible instead of remaining behind a black gate. The aperture also refreshes synchronously when the opening finishes. Mobile defaults, saved opt-in/opt-out and unavailable storage are covered in all three engines. A fresh Firefox profile loads the live deployment; the reported existing-profile failure remains under investigation.
+Blocked startup-module and stalled-startup checks verify that the portfolio becomes visible instead of remaining behind a black gate. The aperture also refreshes synchronously when the opening finishes. Mobile defaults, saved opt-in/opt-out and unavailable storage are covered in all three engines. The live-only Firefox black screen was reproduced with EasyList’s `div[id^="crt-"][style]` cosmetic rule: it hid the entire viewport. Screen containers now use `screen-*` IDs, and the regression suite runs with that rule injected.
+
+Renderer checks cover collapsed hosts, GPU source-size limits and context-loss mask cleanup. Hidden layers skip texture uploads; settled frame canvases are reused while the tesseract animates.

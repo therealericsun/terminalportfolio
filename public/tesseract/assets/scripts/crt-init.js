@@ -1,4 +1,4 @@
-import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.0-shared-2';
+import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.1';
 
 const checkbox = document.querySelector('#crt-effect');
 const storageKey = 'tesseract:crt-effect';
@@ -14,7 +14,7 @@ const effects = [];
 const detailLayers = [];
 function initializeCRT() {
   try {
-    const screen = document.querySelector('#crt-screen');
+    const screen = document.querySelector('#screen-viewport');
     const curvature = parseFloat(getComputedStyle(screen).getPropertyValue('--crt-curvature')) || 0;
     const crt = createWebGLCRT(screen, {
       aperture: true,
@@ -33,9 +33,9 @@ function initializeCRT() {
       effects.push(gpu); return gpu;
     };
     const frames = [...document.querySelectorAll('canvas[data-crt-frame]')];
-    const pageDetails = detail('crt-page-details', 3, [document.querySelector('#ascii-name-canvas'),
+    const pageDetails = detail('screen-page-details', 3, [document.querySelector('#ascii-name-canvas'),
       ...frames.filter(canvas => !canvas.closest('#settings-drawer'))]);
-    const menuDetails = detail('crt-menu-details', 6, frames.filter(canvas => canvas.closest('#settings-drawer')));
+    const menuDetails = detail('screen-menu-details', 6, frames.filter(canvas => canvas.closest('#settings-drawer')));
     const uiOptions = { enabled, grain:0, scanlines:0, mask:0, vignette:0, glow:0, protect:'', curvature, alignControls:false };
     // Safari cannot flatten accelerated scrolling descendants into one SVG
     // source. Crop the same screen-wide field to each native surface instead.
@@ -45,13 +45,16 @@ function initializeCRT() {
     screen.dataset.crtGeometry = 'shared-viewport';
     screen.dataset.crtRenderer = crt.renderer;
     let pendingFrame = 0;
+    let detailsChanged = true;
     const render = () => {
       cancelAnimationFrame(pendingFrame); pendingFrame = 0;
-      crt.render(); pageDetails.render(); menuDetails.render();
+      crt.render();
+      if (detailsChanged) { pageDetails.render(); menuDetails.render(); detailsChanged = false; }
     };
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    document.addEventListener('crt:frame', () => {
+    document.addEventListener('crt:frame', event => {
       // Several frame/name painters can update during one tick. Upload once.
+      detailsChanged ||= Boolean(event.detail?.graphics);
       if (document.hidden || reduced.matches) render();
       else if (!pendingFrame) pendingFrame = requestAnimationFrame(render);
     });
@@ -59,6 +62,7 @@ function initializeCRT() {
     document.addEventListener('crt:layout', () => {
       for (const effect of effects) effect.refresh();
       // The aperture must leave its opening-line geometry even if rAF pauses.
+      detailsChanged = true;
       render();
     });
     checkbox.addEventListener('change', () => {

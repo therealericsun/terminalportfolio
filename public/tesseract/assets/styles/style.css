@@ -207,17 +207,17 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
 
 /* One screen coordinate system for GPU artwork and native HTML surfaces. */
 html,body { height:100%; overflow:hidden; background:#000; }
-#crt-screen {
+#screen-viewport {
   position:fixed; inset:clamp(12px,3vh,36px) clamp(12px,3.2vw,64px);
   overflow:visible; background:var(--bg);
   transform:translateZ(0); isolation:isolate;
   --screen-height:94svh;
 }
-#crt-glass { position:absolute; inset:0; background:var(--bg); }
+#screen-glass { position:absolute; inset:0; background:var(--bg); }
 #page-scroll { position:absolute; inset:0; overflow-x:hidden; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule) var(--bg); }
 #page-scroll>.page { min-height:var(--screen-height); }
 #render-backdrop { position:absolute; }
-body.crt-disabled #crt-screen { inset:0; clip-path:none; border-radius:0; box-shadow:none; --screen-height:100svh; }
+body.crt-disabled #screen-viewport { inset:0; clip-path:none; border-radius:0; box-shadow:none; --screen-height:100svh; }
 @media(max-width:900px) {
   #page-scroll>.page { min-height:0; }
   #page-scroll { padding-bottom:var(--drawer-handle-height); }
@@ -227,9 +227,9 @@ body.crt-disabled #crt-screen { inset:0; clip-path:none; border-radius:0; box-sh
 }
 
 /* All animated sources feed the dedicated WebGL pass beneath native HTML. */
-#crt-glass { z-index:1; background:transparent; }
-#crt-screen { background:var(--bg); }
-#crt-screen>#tesseract-scene { position:absolute; z-index:2; top:50%; height:min(900px,calc(var(--screen-height) - 90px)); }
+#screen-glass { z-index:1; background:transparent; }
+#screen-viewport { background:var(--bg); }
+#screen-viewport>#tesseract-scene { position:absolute; z-index:2; top:50%; height:min(900px,calc(var(--screen-height) - 90px)); }
 #tesseract-position { display:none; }
 @media(max-width:900px) {
   #tesseract-position { display:block; width:100%; height:var(--mobile-scene-height); margin:24px auto 0; }
@@ -237,22 +237,22 @@ body.crt-disabled #crt-screen { inset:0; clip-path:none; border-radius:0; box-sh
 }
 @media(max-width:650px) { #tesseract-position { margin-top:20px; } }
 /* The screen clips the GPU canvas, native content, UI and textures together. */
-#crt-screen>[data-crt-generated] { pointer-events:none!important; }
+#screen-viewport>[data-crt-generated] { pointer-events:none!important; }
 
 
 /* The actual picture opens from a thin beam; it is never replaced by static. */
-#crt-startup { position:fixed; inset:0; transform-origin:50% 50%; }
-html.crt-booting #crt-startup { visibility:hidden; }
-html.crt-powering #crt-startup {
+#screen-startup { position:fixed; inset:0; transform-origin:50% 50%; }
+html.crt-booting #screen-startup { visibility:hidden; }
+html.crt-powering #screen-startup {
   visibility:visible; will-change:transform;
   animation:screen-power-on 1.35s cubic-bezier(.4,0,.2,1) both;
 }
-#crt-power { display:none; position:fixed; z-index:2147483645; inset:0; background:#000; pointer-events:none; }
-html.crt-booting #crt-power { display:block; }
-html.crt-powering #crt-power { background:transparent; }
-#crt-power::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:0; }
-#crt-power::after { width:90%; height:85%; background:radial-gradient(ellipse,#de9b4218,transparent 65%); }
-html.crt-powering #crt-power::after { animation:screen-start-bloom 1.35s ease-in-out both; }
+#screen-power { display:none; position:fixed; z-index:2147483645; inset:0; background:#000; pointer-events:none; }
+html.crt-booting #screen-power { display:block; }
+html.crt-powering #screen-power { background:transparent; }
+#screen-power::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:0; }
+#screen-power::after { width:90%; height:85%; background:radial-gradient(ellipse,#de9b4218,transparent 65%); }
+html.crt-powering #screen-power::after { animation:screen-start-bloom 1.35s ease-in-out both; }
 @keyframes screen-power-on {
   0% { transform:scale(.48,.001); }
   12% { transform:scale(.98,.003); }
@@ -265,8 +265,8 @@ html.crt-powering #crt-power::after { animation:screen-start-bloom 1.35s ease-in
   100% { opacity:0; }
 }
 @media(prefers-reduced-motion:reduce) {
-  html.crt-booting #crt-startup { visibility:visible; animation:none!important; }
-  #crt-power { display:none; }
+  html.crt-booting #screen-startup { visibility:visible; animation:none!important; }
+  #screen-power { display:none; }
 }
 
 /* The shared cached aperture is a compositor layer. CSS clipping an animated
