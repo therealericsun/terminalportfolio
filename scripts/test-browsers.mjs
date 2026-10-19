@@ -25,10 +25,18 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         };
         const observer = new MutationObserver(attach);
         observer.observe(document, { childList:true, subtree:true }); attach();
-        window.startup = { reveals: [], fills: [] };
+        window.startup = { reveals: [], fills: [], openingHeights: [] };
         let booting = false;
         new MutationObserver(() => {
           const active = document.documentElement.classList.contains('crt-booting');
+          if (document.documentElement.classList.contains('crt-powering') && !window.startup.samplingOpening) {
+            window.startup.samplingOpening = true;
+            const sampleOpening = () => {
+              window.startup.openingHeights.push(document.querySelector('#screen-viewport').getBoundingClientRect().height);
+              if (document.documentElement.classList.contains('crt-powering')) requestAnimationFrame(sampleOpening);
+            };
+            requestAnimationFrame(sampleOpening);
+          }
           if (booting && !active) window.startup.opened = performance.now();
           booting = active;
         }).observe(document, { subtree: true, attributes: true, attributeFilter: ['class'] });
@@ -64,6 +72,8 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.ok(screen?.width > 300 && screen?.height > 500, 'ad-block cosmetic rules must not collapse the viewport');
       assert.equal(await page.getByRole('link', { name:'GitHub', exact:true }).isVisible(), true);
       const startup = await page.evaluate(() => window.startup);
+      assert.ok(startup.openingHeights.length > 10, 'opening reveal spans multiple display frames');
+      assert.ok(Math.max(...startup.openingHeights) - Math.min(...startup.openingHeights) < 1, 'opening reveals a stable CRT picture without rescaling its geometry');
       assert.ok(startup.fills.length > 8, 'panel background fills in multiple terminal rows');
       assert.ok(startup.fills.every((fill, i) => fill.opacity === '1' && (!i || fill.height >= startup.fills[i - 1].height)), 'row fill advances without fading');
       assert.ok(startup.content - startup.opened >= 980, 'one-second pause after screen opening');
@@ -81,10 +91,39 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.equal(await page.locator('body').evaluate(e => e.classList.contains('crt-disabled')), mobile);
       assert.equal(await page.locator('#screen-page-details canvas[data-crt-renderer]').count(), 1);
       assert.equal(await page.locator('#screen-menu-details canvas[data-crt-renderer]').count(), 1);
+      await page.evaluate(() => {
+        window.drawerChecks = { frames:0, maxDrift:0, uploads:0 };
+        for (const C of [WebGLRenderingContext, WebGL2RenderingContext]) {
+          for (const name of ['texImage2D', 'texSubImage2D']) {
+            const original = C.prototype[name];
+            C.prototype[name] = function(...args) {
+              if (this.canvas.parentElement?.id === 'screen-menu-details' || this.canvas.parentElement?.id === 'screen-page-details') window.drawerChecks.uploads++;
+              return original.apply(this, args);
+            };
+          }
+        }
+        document.addEventListener('crt:frame', event => {
+          if (!event.detail?.menuLayout || document.body.classList.contains('crt-disabled')) return;
+          const output = document.querySelector('#screen-menu-details canvas[data-crt-renderer]');
+          const gl = output.getContext(output.dataset.crtRenderer), program = gl.getParameter(gl.CURRENT_PROGRAM);
+          const rect = gl.getUniform(program, gl.getUniformLocation(program, 'uRect1'));
+          const host = output.parentElement.getBoundingClientRect();
+          const source = document.querySelector('#settings-drawer>canvas[data-crt-frame]').getBoundingClientRect();
+          const expected = (source.top - host.top) / (host.height / output.parentElement.clientHeight);
+          window.drawerChecks.frames++;
+          window.drawerChecks.maxDrift = Math.max(window.drawerChecks.maxDrift, Math.abs(rect[1] - expected));
+        });
+      });
       await page.keyboard.press('Tab');
       await page.locator('#drawer-toggle').focus();
       await page.keyboard.press('Enter');
       await page.waitForTimeout(280);
+      if (!mobile) {
+        const checks = await page.evaluate(() => window.drawerChecks);
+        assert.ok(checks.frames > 2, 'drawer moves through multiple curved frames');
+        assert.ok(checks.maxDrift < .01, 'GPU frame follows the background in the same paint');
+        assert.equal(checks.uploads, 0, 'moving the drawer reuses cached menu and page textures');
+      }
       if (mobile) {
         await page.locator('#crt-effect').focus();
         await page.keyboard.press('Space');
@@ -109,11 +148,23 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       const dragValues = await page.evaluate(() => window.dragValues);
       assert.ok(dragValues.length >= 4, `continuous slider drag (${name}, ${mobile ? 'phone' : 'desktop'}): ${JSON.stringify(dragValues)}`);
       assert.ok(Number(await slider.inputValue()) > 6, 'drag reaches the higher value');
+      assert.equal(await slider.evaluate(e => getComputedStyle(e).outlineStyle), 'none', 'pointer dragging has no yellow outline');
+      await page.keyboard.press('ArrowLeft');
+      assert.equal(await slider.evaluate(e => getComputedStyle(e).outlineStyle), 'none', 'keyboard focus has no box');
+      assert.equal(await slider.evaluate(e => getComputedStyle(e.parentElement.querySelector('.setting-heading>span')).textDecorationLine), 'none', 'slider focus does not underline its label');
       for (let i = 0; i < 4; i++) {
         await page.locator('#crt-effect').focus();
         await page.keyboard.press('Space');
       }
+      await page.waitForTimeout(100);
+      await page.evaluate(() => Object.assign(window.drawerChecks, { frames:0, maxDrift:0, uploads:0 }));
       await page.keyboard.press('Escape');
+      await page.waitForTimeout(280);
+      const closing = await page.evaluate(() => window.drawerChecks);
+      assert.ok(closing.frames > 2 && closing.maxDrift < .01, 'closing frame stays aligned with its curved background');
+      // Mobile closing also resizes/repositions the page artwork; resized frame
+      // canvases need fresh pixels, unlike the stationary desktop layout.
+      if (!mobile) assert.equal(closing.uploads, 0, 'closing also reuses static textures');
       assert.equal(await page.locator('#drawer-toggle').evaluate(e => e === document.activeElement), true);
       assert.deepEqual(errors, []);
       await page.emulateMedia({ reducedMotion: 'reduce' });

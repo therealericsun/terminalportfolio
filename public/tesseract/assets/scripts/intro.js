@@ -205,6 +205,7 @@ export class Entrance {
     if (elapsed >= this.duration) this.finish();
   }
   finish() {
+    if (this.finished) return;
     this.finished = true;
     if (this.temporary) this.ascii?.remove();
     else { this.frame?.classList.remove('assembly-frame'); this.ascii?.paint(Infinity); }

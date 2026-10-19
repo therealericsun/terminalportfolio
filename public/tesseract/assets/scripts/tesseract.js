@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-13';
+import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-14';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -483,7 +483,7 @@ function tick(now) {
   if (drawer.classList.contains('is-entering')) {
     const progress = clamp((entranceTime() / loadingTimeScale - .72) / 1.12, 0, 1);
     drawer.style.top = `${46 * (1 - progress) ** 3}px`;
-    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ menuLayout:true } }));
     if (progress === 1) finishDrawerEntrance();
   }
   const canAnimate = !activeControl && (!dragging || settings.followMouse);
@@ -542,13 +542,14 @@ function moveDrawer(from, to) {
     const progress = reduced.matches || document.hidden ? 1 : Math.min(1, (now - began) / 240);
     drawer.style.marginBottom = `${from + (to - from) * ease(progress)}px`;
     if (progress === 1) { drawerMotion = 0; drawer.style.removeProperty('margin-bottom'); drawerContent.style.removeProperty('visibility'); }
-    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ menuLayout:true } }));
     if (progress < 1) drawerMotion = requestAnimationFrame(step);
   };
   drawerMotion = requestAnimationFrame(step);
 }
 function setDrawerOpen(open) {
   clearTimeout(hoverCloseTimer);
+  if (drawer.classList.contains('is-open') === open) return;
   finishDrawerEntrance();
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
   const from = parseFloat(getComputedStyle(drawer).marginBottom);
@@ -563,7 +564,7 @@ function setDrawerOpen(open) {
   document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
   document.body.classList.toggle('settings-open', open);
   positionArtwork();
-  document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+  document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ menuLayout:true } }));
   if (open && matchMedia('(max-width: 900px)').matches) {
     const area = screen.clientHeight - drawer.getBoundingClientRect().height;
     const bounds = scene.getBoundingClientRect();
@@ -574,7 +575,7 @@ function setDrawerOpen(open) {
   }
 }
 const updateDrawerSize = () => {
-  drawer.style.setProperty('--drawer-height', `${drawer.offsetHeight}px`);
+  drawer.parentElement.style.setProperty('--drawer-height', `${drawer.offsetHeight}px`);
   if (drawer.classList.contains('is-open')) document.body.style.setProperty('--open-drawer-height', `${drawer.getBoundingClientRect().height}px`);
 };
 new ResizeObserver(updateDrawerSize).observe(drawer);

@@ -6,7 +6,8 @@ Plain HTML, CSS and JavaScript. Page assets live in `public/tesseract/assets/`. 
 - Enter a seed to reproduce a shape; `tesseract` restores the default.
 - CRT defaults off in the mobile layout (900px and narrower); a saved toggle preference takes priority. Reduced motion skips the startup and freezes animation.
 - `tesseract.js` renders the scene, `tesseract-math.js` handles projection, and `polytope.js` generates seeded shapes.
-- Startup opens the screen smoothly, waits one second, traces each frame while its dark background fills downward in opaque rows, then pauses 220ms before revealing its text.
+- Startup reveals the screen outward from its center without rescaling the CRT, waits one second, traces each frame while its dark background fills downward in opaque rows, then pauses 220ms before revealing its text.
+- The drawer uses a stationary filter sized to its expanded height; its GPU frame moves with the background using cached textures.
 - `crt-init.js` applies the vendored CRT library independently of the renderer.
 
 Run `npm run check`, `npm test`, and `npm run build` before publishing. Update the CRT distribution with `npm run sync:crt` after building the sibling library.

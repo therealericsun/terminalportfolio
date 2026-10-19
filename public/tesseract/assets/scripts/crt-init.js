@@ -1,4 +1,4 @@
-import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.1';
+import { createCRT, createWebGLCRT } from '../vendor/crt-effect/crt-effect.js?v=1.1.2';
 
 const checkbox = document.querySelector('#crt-effect');
 const storageKey = 'tesseract:crt-effect';
@@ -53,6 +53,9 @@ function initializeCRT() {
     };
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     document.addEventListener('crt:frame', event => {
+      // The native drawer has already moved. Place its cached frame in this
+      // paint, rather than uploading every static canvas on the next rAF.
+      if (event.detail?.menuLayout) { menuDetails.render(false); return; }
       // Several frame/name painters can update during one tick. Upload once.
       detailsChanged ||= Boolean(event.detail?.graphics);
       if (document.hidden || reduced.matches) render();
