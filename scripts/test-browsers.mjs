@@ -138,11 +138,13 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.equal(await page.locator('#screen-page-details canvas[data-crt-renderer]').count(), 1);
       assert.equal(await page.locator('#screen-menu-details canvas[data-crt-renderer]').count(), 1);
       await page.evaluate(() => {
-        window.drawerChecks = { frames:0, maxDrift:0, uploads:0 };
+        window.drawerChecks = { frames:0, maxDrift:0, uploads:0, layers:{} };
         for (const C of [WebGLRenderingContext, WebGL2RenderingContext]) {
           for (const name of ['texImage2D', 'texSubImage2D']) {
             const original = C.prototype[name];
             C.prototype[name] = function(...args) {
+              const host = this.canvas.parentElement?.id;
+              window.drawerChecks.layers[host] = (window.drawerChecks.layers[host] || 0) + 1;
               if (this.canvas.parentElement?.id === 'screen-menu-details' || this.canvas.parentElement?.id === 'screen-page-details') window.drawerChecks.uploads++;
               return original.apply(this, args);
             };
@@ -254,6 +256,15 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.equal(await page.locator('#drawer-toggle').evaluate(e => e === document.activeElement), true);
       assert.deepEqual(errors, []);
       await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForTimeout(100);
+      for (const [selector, expected] of [['#settings-drawer>canvas[data-crt-frame]', 'screen-menu-details'], ['.portfolio-window>canvas[data-crt-frame]', 'screen-page-details']]) {
+        await page.evaluate(selector => {
+          window.drawerChecks.layers = {};
+          document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true, source:document.querySelector(selector) } }));
+        }, selector);
+        const layers = await page.evaluate(() => window.drawerChecks.layers);
+        assert.deepEqual(Object.keys(layers), [expected], 'repainting one frame uploads only its own graphics layer');
+      }
       await page.reload();
       await page.waitForFunction(() => !document.documentElement.classList.contains('is-loading'));
       assert.equal(await page.locator('#crt-effect').isChecked(), true, 'saved opt-in survives reload');

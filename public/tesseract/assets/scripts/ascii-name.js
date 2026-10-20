@@ -71,7 +71,7 @@ export function initAsciiName() {
       ctx.fillStyle = palette[asciiColorIndex(tone, palette.length)];
       ctx.fillText(char, x, y);
     }
-    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true, source:canvas } }));
   }
   new ResizeObserver(draw).observe(canvas);
   document.fonts.ready.then(draw);

@@ -1,8 +1,8 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, loadingTimeScale } from './intro.js?v=startup-23';
-import { initAsciiName } from './ascii-name.js';
+import { Entrance, loadingTimeScale } from './intro.js?v=perf-1';
+import { initAsciiName } from './ascii-name.js?v=perf-1';
 
 const canvas = document.querySelector('#tesseract');
 const ctx = canvas.getContext('2d');
@@ -54,6 +54,12 @@ const assemblyDuration = 2.6;
 const assemblyTempo = 1 / (1.6 * loadingTimeScale);
 const ramp = ' .,:;!i><+r?/tfx%S&#@';
 const faceRamp = ' .,:;+=*';
+const edgeDirections = ['', '─', '│', '╲', '╱'];
+const jointNormals = [];
+for (let lat = 1; lat < 8; lat++) for (let lon = 0; lon < 14; lon++) {
+  const phi = lat * Math.PI / 8, theta = lon * Math.PI / 7;
+  jointNormals.push([Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta)]);
+}
 // The text and simulation share the same CSS color tokens. Interpolate the
 // reference's ember → orange → gold → cream ramp using geometric brightness.
 const theme = getComputedStyle(document.documentElement);
@@ -154,7 +160,8 @@ function initOrientationIndicator() {
       const dy = length > 3 ? (end[1] - 51) / length : .7;
       labels.push({ node: label, x: end[0] + dx * 10, y: end[1] + dy * 10 });
       group.setAttribute('opacity', .55 + .45 * (facing + 1) / 2);
-      output.value = `${facing < -.005 ? '−' : '+'}${Math.abs(facing).toFixed(2)}`;
+      const text = `${facing < -.005 ? '−' : '+'}${Math.abs(facing).toFixed(2)}`;
+      if (output.value !== text) output.value = text;
       group.dataset.facing = facing.toFixed(4);
       group.dataset.vector = vector.map(v => v.toFixed(4)).join(',');
     }
@@ -258,12 +265,12 @@ function renderAscii(target, points, assembling, zoom = 1) {
       const v = ((c[1] - a[1]) * (px - c[0]) + (a[0] - c[0]) * (py - c[1])) / area;
       const w = 1 - u - v;
       if (u < 0 || v < 0 || w < 0) continue;
-      const q = [u / (7.8 - a[2]), v / (7.8 - b[2]), w / (7.8 - c[2])];
-      const sum = q[0] + q[1] + q[2], z = 7.8 - 1 / sum;
+      const q0 = u / (7.8 - a[2]), q1 = v / (7.8 - b[2]), q2 = w / (7.8 - c[2]);
+      const sum = q0 + q1 + q2, z = 7.8 - 1 / sum;
       const i = x + y * cols;
       if (z <= surfaceDepth[i]) continue;
-      const s = (q[0] * uv[0][0] + q[1] * uv[1][0] + q[2] * uv[2][0]) / sum;
-      const t = (q[0] * uv[0][1] + q[1] * uv[1][1] + q[2] * uv[2][1]) / sum;
+      const s = (q0 * uv[0][0] + q1 * uv[1][0] + q2 * uv[2][0]) / sum;
+      const t = (q0 * uv[0][1] + q1 * uv[1][1] + q2 * uv[2][1]) / sum;
       // A few fine diagonal bands follow each face through the projection.
       // Open space between them keeps the internal structure legible.
       const stripe = (s + t) * 4;
@@ -285,7 +292,7 @@ function renderAscii(target, points, assembling, zoom = 1) {
     return [cols / 2 + p[0] * perspective * scaleX,
       rows / 2 - p[1] * perspective * scaleY, p[2]];
   };
-  function putBackdropEdge(px, py, pz, normal, diffuse, trace, direction) {
+  function putStrutEdge(px, py, pz, normal, diffuse, trace, direction) {
     const perspective = 7.8 / (7.8 - pz);
     const x = Math.floor(cols / 2 + px * perspective * scaleX);
     const y = Math.floor(rows / 2 - py * perspective * scaleY);
@@ -293,7 +300,8 @@ function renderAscii(target, points, assembling, zoom = 1) {
     const i = x + y * cols;
     if (pz <= edgeDepth[i]) return;
     // Match illumination() exactly, evaluating only depth-visible samples.
-    // Scalar arithmetic avoids temporary vectors in the enlarged strut pass.
+    // Skip hidden samples before lighting, for both views. Keep the hot loop
+    // scalar so rotating struts do not allocate vectors for every sample.
     const eyeLength = Math.hypot(px, py, 8 - pz);
     const hx = -3 / Math.sqrt(61) - px / eyeLength;
     const hy = -4 / Math.sqrt(61) - py / eyeLength;
@@ -339,15 +347,9 @@ function renderAscii(target, points, assembling, zoom = 1) {
         if (distanceFromEnd > progress * .5) continue;
         const trace = assembling && progress < .99 && Math.abs(distanceFromEnd - progress * .5) < .022;
         const radius = .043 * edgeWidthScale * settings.edgeWidth;
-        if (isBackdrop) {
-          putBackdropEdge(start[0] + delta[0] * fraction + normal[0] * radius,
-            start[1] + delta[1] * fraction + normal[1] * radius,
-            start[2] + delta[2] * fraction + normal[2] * radius, normal, diffuse, trace, direction);
-        } else {
-          const p = start.map((v, i) => v + delta[i] * fraction + normal[i] * radius);
-          const light = Math.max(illumination(normal, p), trace ? .98 : 0);
-          putEdge(project(p), light, light < .45 ? direction : 0);
-        }
+        putStrutEdge(start[0] + delta[0] * fraction + normal[0] * radius,
+          start[1] + delta[1] * fraction + normal[1] * radius,
+          start[2] + delta[2] * fraction + normal[2] * radius, normal, diffuse, trace, direction);
       }
     }
   }
@@ -355,9 +357,7 @@ function renderAscii(target, points, assembling, zoom = 1) {
   for (const [index, vertex] of points.entries()) {
     const reveal = assembling ? smooth((assemblyTime - .04 - noise(index) * .22) / .28) : 1;
     if (reveal === 0) continue;
-    for (let lat = 1; lat < 8; lat++) for (let lon = 0; lon < 14; lon++) {
-      const phi = lat * Math.PI / 8, theta = lon * Math.PI / 7;
-      const normal = [Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta)];
+    for (const normal of jointNormals) {
       const p = vertex.map((v, i) => v + normal[i] * .061 * edgeWidthScale * settings.edgeWidth);
       const spark = assembling ? (1 - smooth((assemblyTime - .4) / .65)) * reveal : 0;
       putEdge(project(p), Math.max(illumination(normal, p) * reveal, spark));
@@ -386,7 +386,7 @@ function renderAscii(target, points, assembling, zoom = 1) {
       if (edgeDepth[i] < surfaceDepth[i] - .09) light *= 1 - .18 * faceReveal * settings.detail / .65;
     }
     let char = hasEdge
-      ? light < .32 && edgeGlyph[i] ? ['', '─', '│', '╲', '╱'][edgeGlyph[i]] : ramp[clamp(Math.round(light * (ramp.length - 1)), 1, ramp.length - 1)]
+      ? light < .32 && edgeGlyph[i] ? edgeDirections[edgeGlyph[i]] : ramp[clamp(Math.round(light * (ramp.length - 1)), 1, ramp.length - 1)]
       : faceRamp[clamp(Math.round(light * 17), 1, faceRamp.length - 1)];
     if (assembling && !hasEdge && faceReveal > 0 && faceReveal < 1) {
       const shimmer = Math.max(0, 1 - Math.abs(sweep - sweepPosition - .1) * 13);
@@ -395,11 +395,12 @@ function renderAscii(target, points, assembling, zoom = 1) {
       char = symbols[(i * 11 + Math.floor(assemblyTime * 18)) % symbols.length];
     }
     const color = asciiColorIndex(light, palette.length);
-    batches[color].push([char, (i % cols + .5) * cellW, (Math.floor(i / cols) + .5) * cellH]);
+    batches[color].push(char, (i % cols + .5) * cellW, (Math.floor(i / cols) + .5) * cellH);
   }
   for (let color = 0; color < batches.length; color++) {
     ctx.fillStyle = colors[color];
-    for (const [char, x, y] of batches[color]) ctx.fillText(char, x, y);
+    const batch = batches[color];
+    for (let i = 0; i < batch.length; i += 3) ctx.fillText(batch[i], batch[i + 1], batch[i + 2]);
   }
 }
 function draw() {
@@ -454,14 +455,16 @@ function syncControls() {
       : slider.id === 'rotation-speed' ? settings.speed
       : slider.id === 'projection-depth' ? settings.depth
       : slider.id === 'edge-width' ? settings.edgeWidth : settings.detail * 100;
-    slider.value = value.toFixed(1);
-    slider.style.setProperty('--fill', `${(value - Number(slider.min)) / (Number(slider.max) - Number(slider.min)) * 100}%`);
+    const nextValue = value.toFixed(1);
+    if (slider.value !== nextValue) slider.value = nextValue;
+    const fill = `${(value - Number(slider.min)) / (Number(slider.max) - Number(slider.min)) * 100}%`;
+    if (slider.style.getPropertyValue('--fill') !== fill) slider.style.setProperty('--fill', fill);
     const output = slider.parentElement.querySelector('output');
     const text = plane ? `${Math.round(value)}°`
       : slider.id === 'rotation-speed' || slider.id === 'edge-width' ? `${value.toFixed(1)}×`
       : slider.id === 'projection-depth' ? value.toFixed(1) : `${Math.round(value)}%`;
-    output.value = text;
-    slider.setAttribute('aria-valuetext', text);
+    if (output.value !== text) output.value = text;
+    if (slider.getAttribute('aria-valuetext') !== text) slider.setAttribute('aria-valuetext', text);
   }
 }
 function tick(now) {

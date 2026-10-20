@@ -139,7 +139,7 @@ export class AsciiFrame {
     if (this.header) this.header.style.visibility = headerVisible ? 'visible' : 'hidden';
     const canvasKey = !animated ? 'settled' : this.panel.dataset.frame === 'tracing' ? key : headerVisible ? 'settled-title' : 'settled-frame';
     if (canvasKey === this.canvasKey) {
-      if (visibilityChanged) document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+      if (visibilityChanged) document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true, source:this.element } }));
       return;
     }
     this.canvasKey = canvasKey;
@@ -170,7 +170,7 @@ export class AsciiFrame {
       ctx.fillStyle = style.getPropertyValue('--muted').trim();
       ctx.fillText(title.textContent.trim(), left + cellWidth * 2, titleY);
     }
-    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
+    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true, source:this.element } }));
   }
   remove() {
     this.observer.disconnect(); this.element.remove();

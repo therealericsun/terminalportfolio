@@ -97,19 +97,27 @@ function initializeCRT() {
     screen.dataset.crtGeometry = 'shared-viewport';
     screen.dataset.crtRenderer = crt.renderer;
     let pendingFrame = 0;
-    let detailsChanged = true;
+    let sceneChanged = true, pageChanged = true, menuChanged = true;
     const render = () => {
       cancelAnimationFrame(pendingFrame); pendingFrame = 0;
-      crt.render();
-      if (detailsChanged) { pageDetails.render(); menuDetails.render(); detailsChanged = false; }
+      if (sceneChanged) crt.render();
+      if (pageChanged) pageDetails.render();
+      if (menuChanged) menuDetails.render();
+      sceneChanged = pageChanged = menuChanged = false;
     };
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     document.addEventListener('crt:frame', event => {
       // The native drawer has already moved. Place its cached frame in this
       // paint, rather than uploading every static canvas on the next rAF.
       if (event.detail?.menuLayout) { menuDetails.render(false); return; }
-      // Several frame/name painters can update during one tick. Upload once.
-      detailsChanged ||= Boolean(event.detail?.graphics);
+      // Upload only the changed layer. Tracing a menu border must not also
+      // upload the full scene, name and unrelated page frames.
+      if (event.detail?.graphics) {
+        const source = event.detail.source;
+        if (!source) sceneChanged = pageChanged = menuChanged = true;
+        else if (source.closest('#settings-drawer')) menuChanged = true;
+        else pageChanged = true;
+      } else sceneChanged = true;
       if (document.hidden || reduced.matches) render();
       else if (!pendingFrame) pendingFrame = requestAnimationFrame(render);
     });
@@ -117,7 +125,7 @@ function initializeCRT() {
     document.addEventListener('crt:layout', () => {
       for (const effect of effects) effect.refresh();
       // The aperture must leave its opening-line geometry even if rAF pauses.
-      detailsChanged = true;
+      sceneChanged = pageChanged = menuChanged = true;
       render();
     });
     checkbox.addEventListener('change', () => {

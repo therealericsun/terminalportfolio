@@ -12,3 +12,19 @@
 Blocked startup-module and stalled-startup checks verify that the portfolio becomes visible instead of remaining behind a black gate. The aperture also refreshes synchronously when the opening finishes. Mobile defaults, saved opt-in/opt-out and unavailable storage are covered in all three engines. The live-only Firefox black screen was reproduced with EasyList’s `div[id^="crt-"][style]` cosmetic rule: it hid the entire viewport. Screen containers now use `screen-*` IDs, and the regression suite runs with that rule injected.
 
 Renderer checks cover collapsed hosts, GPU source-size limits and context-loss mask cleanup. Hidden layers skip texture uploads; settled frame canvases are reused while the tesseract animates.
+
+## Firefox performance · 2026-10-19
+
+Measured before/after on the same machine using Playwright Firefox 157, a 1440×1000 viewport at 2× density, CRT enabled, five seconds of settled animation and four drawer toggles. Instrumentation counts requestAnimationFrame callbacks, scene draws and WebGL texture uploads. These short, headless measurements include instrumentation overhead and are comparisons rather than guarantees for other devices.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Settled animation callbacks/sec | 29.0 | 40.0 |
+| Settled scene draws/sec (30 FPS cap) | 28.4 | 30.0 |
+| 95th-percentile callback interval | 41.6 ms | 34.1 ms |
+| Callbacks/sec during drawer toggles | 28.5 | 43.7 |
+| Scene texture uploads during startup | 470 | 236 |
+
+Foreground struts now use the same visibility-first scalar lighting path as the backdrop. Face interpolation avoids temporary arrays, joint normals are precomputed, glyph batches are flat, and unchanged labels/slider styles skip DOM writes. Frame repaint events identify their source so the compositor uploads only the affected scene/page/menu layer.
+
+The foreground and backdrop canvases match the previous renderer pixel-for-pixel for the static default tesseract and a generated `firefox-perf` shape at the default orientation. Browser regression checks verify isolated page/menu uploads as well as startup, drawer alignment, sliders, saved preferences and reduced motion in Firefox and Chromium on desktop and phone sizes. The SVG-based native-text curvature remains a possible Firefox-specific cost; it was retained to preserve the visual treatment.
