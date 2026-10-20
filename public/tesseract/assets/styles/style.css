@@ -50,7 +50,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--gold); outline-
 .skill-group { margin-bottom: 9px; }
 .skill-group h2 { font-size: inherit; font-weight: 500; color: var(--accent); margin: 0; }
 .skill-group p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
-footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--body-font-size); color: var(--faint); }
+footer { flex:0 0 auto; margin-top:20px; width:fit-content; font-size:var(--body-font-size); color:var(--faint); }
 
 .terminal-window { border: 1px solid color-mix(in srgb,var(--rule) 72%,var(--bg)); border-radius: 0; background: var(--window-bg); overflow: hidden; }
 .window-titlebar { position:relative; display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); background: var(--window-titlebar-bg); font-size: 10px; line-height: 1; color: var(--faint); user-select: none; }
@@ -195,7 +195,7 @@ body:not(.crt-disabled) #screen-viewport * { text-shadow:0 0 calc(1px + var(--cr
   .setting input { margin-top:0; margin-bottom:3px; }
   .checkbox-setting { min-height:24px; }
 }
-@media(min-width:901px) and (max-height:850px) { .page { padding-top:32px; padding-bottom:32px; } footer { bottom:16px; } }
+@media(min-width:901px) and (max-height:850px) { .page { padding-top:32px; padding-bottom:32px; } }
 @media(min-width:901px) and (max-width:1100px) and (max-height:850px) { .page { padding-top:12px; padding-bottom:36px; } }
 
 /* Corner sparks and traced edges assemble the same frame as the 4-D scene. */
@@ -278,7 +278,6 @@ html.crt-powering #screen-power::after { animation:screen-start-bloom 1.35s ease
 /* The shared cached aperture is a compositor layer. CSS clipping an animated
    WebGL canvas forces an expensive offscreen composition in Firefox. */
 
-@media(min-width:901px) { footer { bottom:36px; } }
 .drawer-content[inert] { visibility:hidden; }
 .drawer-content:not([inert]) { visibility:visible; }
 

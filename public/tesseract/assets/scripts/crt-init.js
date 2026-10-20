@@ -44,11 +44,14 @@ function syncDisplayEnabled() {
 syncDisplayEnabled();
 
 const effects = [];
+const pageEffects = [];
 const detailLayers = [];
+let syncPageRendering = () => {};
 function applyEnabled() {
   enabled = checkbox.checked;
   document.body.classList.toggle('crt-disabled', !checkbox.checked);
   for (const effect of effects) effect.setEnabled(checkbox.checked);
+  syncPageRendering();
   syncDisplayEnabled();
 }
 document.querySelector('#rotation-reset').addEventListener('click', () => {
@@ -74,26 +77,45 @@ function initializeCRT() {
     canvasEffect = crt;
     graphicsEffects.push(crt);
     effects.push(crt);
-    const detail = (id, zIndex, sources) => {
+    const detail = (id, zIndex, sources, conditional = false) => {
       const layer = document.createElement('div');
       layer.id = id; layer.setAttribute('aria-hidden', 'true'); layer.inert = true;
       layer.style.cssText = `position:absolute;inset:0;z-index:${zIndex};pointer-events:none`;
       screen.append(layer); detailLayers.push(layer);
-      const gpu = createWebGLCRT(layer, { sources, enabled, curvature,
+      const gpu = createWebGLCRT(layer, { sources, enabled:enabled && !conditional, curvature,
         grain:0, scanlines:0, mask:0, vignette:0, glow:displaySettings.glow });
       graphicsEffects.push(gpu);
-      effects.push(gpu); return gpu;
+      (conditional ? pageEffects : effects).push(gpu); return gpu;
     };
     const frames = [...document.querySelectorAll('canvas[data-crt-frame]')];
+    const pageScroll = document.querySelector('#page-scroll');
     const pageDetails = detail('screen-page-details', 3, [document.querySelector('#ascii-name-canvas'),
-      ...frames.filter(canvas => !canvas.closest('#settings-drawer'))]);
+      ...frames.filter(canvas => !canvas.closest('#settings-drawer'))], true);
     const menuDetails = detail('screen-menu-details', 6, frames.filter(canvas => canvas.closest('#settings-drawer')));
     const uiOptions = { enabled, grain:0, scanlines:0, mask:0, vignette:0, glow:0, protect:'', curvature, alignControls:false };
-    // Safari cannot flatten accelerated scrolling descendants into one SVG
-    // source. Crop the same screen-wide field to each native surface instead.
-    for (const selector of ['.portfolio-window', '.orientation-indicator', 'footer', '#settings-surface']) {
+    for (const selector of ['.orientation-indicator', '#settings-surface']) {
       effects.push(createCRT(document.querySelector(selector), { ...uiOptions, viewport:screen }));
     }
+    const nativePage = createCRT(pageScroll, { ...uiOptions, viewport:screen, enabled:false });
+    const panel = createCRT(document.querySelector('.portfolio-window'), { ...uiOptions, viewport:screen, enabled:false });
+    const footer = createCRT(document.querySelector('footer'), { ...uiOptions, viewport:screen, enabled:false });
+    pageEffects.push(nativePage, panel, footer);
+    let scrollingPage = false;
+    const enable = (effect, value) => { if (effect.enabled !== value) effect.setEnabled(value); };
+    syncPageRendering = () => {
+      scrollingPage = pageScroll.scrollHeight > pageScroll.clientHeight + 1;
+      // Overflowing pages must scroll as one native surface. When everything
+      // fits, keep the smaller filtered surfaces and cached GPU graphics.
+      enable(nativePage, enabled && scrollingPage);
+      enable(panel, enabled && !scrollingPage);
+      enable(footer, enabled && !scrollingPage);
+      enable(pageDetails, enabled && !scrollingPage);
+      screen.dataset.crtScroll = scrollingPage ? 'native' : 'gpu';
+    };
+    syncPageRendering();
+    const pageObserver = new ResizeObserver(syncPageRendering);
+    pageObserver.observe(pageScroll);
+    pageObserver.observe(document.querySelector('.page'));
     screen.dataset.crtGeometry = 'shared-viewport';
     screen.dataset.crtRenderer = crt.renderer;
     let pendingFrame = 0;
@@ -115,6 +137,7 @@ function initializeCRT() {
       if (event.detail?.graphics) {
         const source = event.detail.source;
         if (!source) sceneChanged = pageChanged = menuChanged = true;
+        else if (scrollingPage && pageScroll.contains(source)) return;
         else if (source.closest('#settings-drawer')) menuChanged = true;
         else pageChanged = true;
       } else sceneChanged = true;
@@ -123,7 +146,8 @@ function initializeCRT() {
     });
     // ResizeObserver/rAF may be suspended in a background Safari tab.
     document.addEventListener('crt:layout', () => {
-      for (const effect of effects) effect.refresh();
+      syncPageRendering();
+      for (const effect of [...effects, ...pageEffects]) effect.refresh();
       // The aperture must leave its opening-line geometry even if rAF pauses.
       sceneChanged = pageChanged = menuChanged = true;
       render();
@@ -135,7 +159,7 @@ function initializeCRT() {
   } catch (error) {
     canvasEffect = undefined;
     graphicsEffects.length = 0;
-    for (const effect of effects.reverse()) effect.destroy();
+    for (const effect of [...effects, ...pageEffects].reverse()) effect.destroy();
     for (const layer of detailLayers) layer.remove();
     checkbox.checked = false;
     checkbox.disabled = true;

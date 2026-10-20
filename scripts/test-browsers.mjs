@@ -176,7 +176,8 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         await page.locator('#crt-effect').focus();
         await page.keyboard.press('Space');
       }
-      assert.equal(await page.locator('#ascii-name-canvas').evaluate(e => getComputedStyle(e).opacity), '0');
+      assert.equal(await page.locator('#ascii-name-canvas').evaluate(e => getComputedStyle(e).opacity), mobile ? '1' : '0', 'overflowing pages keep the name in their native scroll surface');
+      assert.equal(await page.locator('#page-scroll').evaluate(e => getComputedStyle(e).filter === 'none'), !mobile, 'the shared scroll filter is used only when the page overflows');
       assert.notEqual(await page.locator('#settings-surface').evaluate(e => getComputedStyle(e).filter), 'none');
       const repo = page.getByRole('link', { name: 'see repo', exact: true });
       assert.equal(await repo.getAttribute('href'), 'https://github.com/therealericsun/crt-effect');
@@ -257,13 +258,13 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.deepEqual(errors, []);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.waitForTimeout(100);
-      for (const [selector, expected] of [['#settings-drawer>canvas[data-crt-frame]', 'screen-menu-details'], ['.portfolio-window>canvas[data-crt-frame]', 'screen-page-details']]) {
+      for (const [selector, expected] of [['#settings-drawer>canvas[data-crt-frame]', ['screen-menu-details']], ['.orientation-indicator>canvas[data-crt-frame]', mobile ? [] : ['screen-page-details']], ['.portfolio-window>canvas[data-crt-frame]', mobile ? [] : ['screen-page-details']]]) {
         await page.evaluate(selector => {
           window.drawerChecks.layers = {};
           document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true, source:document.querySelector(selector) } }));
         }, selector);
         const layers = await page.evaluate(() => window.drawerChecks.layers);
-        assert.deepEqual(Object.keys(layers), [expected], 'repainting one frame uploads only its own graphics layer');
+        assert.deepEqual(Object.keys(layers), expected, 'native page frames need no GPU copy; independent frames upload only their own layer');
       }
       await page.reload();
       await page.waitForFunction(() => !document.documentElement.classList.contains('is-loading'));
@@ -311,14 +312,68 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         const applied = await page.evaluate(() => {
           const overlay=document.querySelector('#screen-viewport>[data-crt-generated="webgl-overlay"]');
           return {grain:Number(overlay.querySelector('[data-crt-grain]').style.opacity),mask:Number(overlay.querySelector('[data-crt-mask]').style.opacity),
-            glow:[...document.querySelectorAll('canvas[data-crt-renderer]')].map(canvas=>{const gl=canvas.getContext(canvas.dataset.crtRenderer);return gl.getUniform(gl.getParameter(gl.CURRENT_PROGRAM),gl.getUniformLocation(gl.getParameter(gl.CURRENT_PROGRAM),'uGlow'));})};
+            glow:[...document.querySelectorAll('canvas[data-crt-renderer]')].filter(canvas=>getComputedStyle(canvas).display!=='none').map(canvas=>{const gl=canvas.getContext(canvas.dataset.crtRenderer);return gl.getUniform(gl.getParameter(gl.CURRENT_PROGRAM),gl.getUniformLocation(gl.getParameter(gl.CURRENT_PROGRAM),'uGlow'));})};
         });
         assert.equal(applied.grain,.025); assert.equal(applied.mask,.2);
-        assert.ok(applied.glow.every(value=>Math.abs(value-.1)<.00001), 'reset reaches every GPU frame/name layer');
+        assert.ok(applied.glow.every(value=>Math.abs(value-.1)<.00001), 'reset reaches every active GPU frame/name layer');
       }
       await page.close();
     }
     console.log(`${name}: all settings reset to defaults on desktop/mobile, with reduced motion respected`);
+    for (const viewport of [{width:1024,height:700}, {width:900,height:540}, {width:390,height:844}]) {
+      const page = await browser.newPage({viewport, deviceScaleFactor:2, reducedMotion:'reduce'});
+      await page.addInitScript(() => localStorage.setItem('tesseract:crt-effect', 'true'));
+      await page.goto(url);
+      await page.waitForFunction(() => document.querySelector('.portfolio-window')?.dataset.entrance === 'complete');
+      await page.waitForFunction(() => document.querySelector('#screen-viewport').dataset.crtScroll === 'native');
+      const scroll = await page.evaluate(async () => {
+        const host = document.querySelector('#page-scroll');
+        const panel = document.querySelector('.portfolio-window');
+        const frame = panel.querySelector('.ascii-frame');
+        const name = panel.querySelector('#ascii-name-canvas');
+        const footer = document.querySelector('footer');
+        const id = getComputedStyle(host).filter.match(/#([^"\)]+)/)[1];
+        const map = document.getElementById(id).querySelector('feImage');
+        const initialMap = map.getAttribute('href');
+        const maxScroll = host.scrollHeight - host.clientHeight;
+        const original = [panel, frame, name].map(el => el.getBoundingClientRect().top);
+        let drift = 0;
+        for (const fraction of [0, .25, .5, .75, 1, .5, 0]) {
+          host.scrollTop = Math.round(maxScroll * fraction);
+          await new Promise(requestAnimationFrame);
+          const bounds = [panel, frame, name].map(el => el.getBoundingClientRect().top);
+          for (let i = 0; i < bounds.length; i++) drift = Math.max(drift, Math.abs(bounds[i] - original[i] + host.scrollTop));
+          if (map.getAttribute('href') !== initialMap) throw new Error('Scrolling regenerated the curvature map');
+        }
+        return {maxScroll, drift, footerGap:footer.getBoundingClientRect().top - panel.getBoundingClientRect().bottom,
+          native:[frame,name].every(el => getComputedStyle(el).opacity === '1'),
+          nestedFilters:[panel,footer].some(el => getComputedStyle(el).filter !== 'none')};
+      });
+      assert.ok(scroll.maxScroll > 0, 'compact layouts exercise a scrolling page');
+      assert.ok(scroll.drift < .1, 'name, frame and panel follow the same native scroll offset');
+      assert.ok(scroll.footerGap >= 16, 'copyright stays below the complete panel');
+      assert.equal(scroll.native, true, 'scrolling canvases remain in the native scroll surface');
+      assert.equal(scroll.nestedFilters, false, 'page content receives the common curvature exactly once');
+      assert.deepEqual(await page.evaluate(() => {
+        const host = document.querySelector('#page-scroll');
+        host.scrollTop = host.scrollHeight;
+        return [getComputedStyle(document.querySelector('#ascii-name-canvas')).opacity, getComputedStyle(document.querySelector('.portfolio-window>.ascii-frame')).opacity];
+      }), ['1','1']);
+      if (viewport.width === 1024) {
+        await page.setViewportSize({width:1440,height:1000});
+        await page.waitForFunction(() => document.querySelector('#screen-viewport').dataset.crtScroll === 'gpu');
+        assert.equal(await page.locator('#ascii-name-canvas').evaluate(e => getComputedStyle(e).opacity), '0', 'fitting layouts return to cached GPU graphics');
+        assert.ok(await page.locator('#screen-page-details canvas[data-crt-renderer]').evaluate(canvas => {
+          const gl = canvas.getContext(canvas.dataset.crtRenderer), program = gl.getParameter(gl.CURRENT_PROGRAM);
+          return Math.abs(gl.getUniform(program, gl.getUniformLocation(program, 'uGlow')) - .1) < .00001;
+        }), 'reenabling cached GPU graphics applies the current glow setting');
+        await page.setViewportSize(viewport);
+        await page.waitForFunction(() => document.querySelector('#screen-viewport').dataset.crtScroll === 'native');
+        assert.equal(await page.locator('#ascii-name-canvas').evaluate(e => getComputedStyle(e).opacity), '1', 'resizing back restores one native scroll surface');
+      }
+      await page.close();
+    }
+    console.log(`${name}: compact desktop, landscape and phone scrolling share one curvature map; copyright remains below the panel`);
     for (const module of ['screen-intro', 'tesseract']) {
       const page = await browser.newPage({ reducedMotion: 'reduce' });
       await page.route(`**/${module}.js*`, route => route.abort());
