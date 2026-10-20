@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, AsciiFrame, loadingTimeScale, entranceTime } from './intro.js?v=startup-19';
+import { Entrance, loadingTimeScale } from './intro.js?v=startup-23';
 import { initAsciiName } from './ascii-name.js';
 
 const canvas = document.querySelector('#tesseract');
@@ -86,16 +86,13 @@ const followMouseToggle = document.querySelector('#mouse-follow');
 const extraPlanes = ['xw', 'yw', 'zw'];
 const drawer = document.querySelector('#settings-drawer');
 const drawerToggle = document.querySelector('#drawer-toggle');
-new AsciiFrame(drawer);
-const drawerEntrance = new Entrance(drawerToggle, reduced.matches, { duration: 1.3, delay: .45, temporary: true });
+const drawerEntrance = new Entrance(drawer, reduced.matches, { duration: 1.3, delay: .45 });
+// Keep the handle stationary and inaccessible until its frame has assembled.
+drawer.inert = !drawerEntrance.finished;
 const finishDrawerEntrance = () => {
-  drawer.classList.remove('is-entering');
-  drawer.style.removeProperty('top');
   drawerEntrance.finish();
+  drawer.inert = false;
 };
-drawer.addEventListener('focusin', finishDrawerEntrance, { once: true });
-if (reduced.matches) finishDrawerEntrance();
-else drawer.classList.add('is-entering');
 const drawerContent = document.querySelector('#drawer-content');
 const sliders = [...drawer.querySelectorAll('input[type="range"]')];
 const autoRotateToggle = document.querySelector('#auto-rotate');
@@ -480,12 +477,7 @@ function tick(now) {
   if (axisEntrance && !axisEntrance.finished) axisEntrance.update();
   if (!drawerEntrance.finished) {
     drawerEntrance.update();
-  }
-  if (drawer.classList.contains('is-entering')) {
-    const progress = clamp((entranceTime() / loadingTimeScale - .72) / 1.12, 0, 1);
-    drawer.style.top = `${46 * (1 - progress) ** 3}px`;
-    document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ menuLayout:true } }));
-    if (progress === 1) finishDrawerEntrance();
+    if (drawerEntrance.finished) drawer.inert = false;
   }
   const canAnimate = !activeControl && (!dragging || settings.followMouse);
   if (canAnimate) {
@@ -549,9 +541,9 @@ function moveDrawer(from, to) {
   drawerMotion = requestAnimationFrame(step);
 }
 function setDrawerOpen(open) {
+  if (!drawerEntrance.finished) return;
   clearTimeout(hoverCloseTimer);
   if (drawer.classList.contains('is-open') === open) return;
-  finishDrawerEntrance();
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
   const from = parseFloat(getComputedStyle(drawer).marginBottom);
   drawer.style.removeProperty('margin-bottom');

@@ -25,7 +25,7 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         };
         const observer = new MutationObserver(attach);
         observer.observe(document, { childList:true, subtree:true }); attach();
-        window.startup = { reveals: [], fills: [], openingHeights: [] };
+        window.startup = { reveals: [], fills: [], openingHeights: [], drawer: [] };
         let booting = false;
         new MutationObserver(() => {
           const active = document.documentElement.classList.contains('crt-booting');
@@ -42,9 +42,40 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         }).observe(document, { subtree: true, attributes: true, attributeFilter: ['class'] });
         document.addEventListener('crt:contentstart', () => {
           window.startup.content = performance.now();
+          const drawerCanvas = document.querySelector('#settings-drawer>canvas[data-crt-frame]');
           const nodes = [...document.querySelectorAll('.portfolio-window .terminal-reveal')];
           const seen = new Set();
           function sample() {
+            const drawer = document.querySelector('#settings-drawer');
+            const toggle = document.querySelector('#drawer-toggle');
+            if (drawer?.dataset.entrance === 'opening') {
+              if (!window.startup.triedDrawer) {
+                window.startup.triedDrawer = true;
+                toggle.focus();
+                toggle.dispatchEvent(new PointerEvent('pointerenter', { pointerType:'mouse' }));
+                toggle.click();
+              }
+              window.startup.drawer.push({ top:drawer.offsetTop, inert:drawer.inert,
+                open:drawer.classList.contains('is-open'), focused:drawer.contains(document.activeElement),
+                sameCanvas:drawer.querySelector('canvas[data-crt-frame]') === drawerCanvas,
+                canvases:drawer.querySelectorAll('canvas[data-crt-frame]').length,
+                shadow:getComputedStyle(drawer).boxShadow,
+                fill:parseFloat(drawer.style.backgroundSize.split(' ')[1]),
+                layers:drawer.style.backgroundImage.split('linear-gradient').length - 1,
+                origin:getComputedStyle(drawer).backgroundPositionY,
+                visibleHeight:document.querySelector('#screen-viewport').getBoundingClientRect().bottom - drawer.getBoundingClientRect().top - drawer.clientTop });
+              if (drawer.dataset.frame === 'complete' && window.startup.drawerSides === undefined) {
+                const scale = drawerCanvas.width / drawer.clientWidth;
+                const top = Math.ceil((toggle.offsetHeight + 3) * scale);
+                const height = Math.max(1, Math.floor((window.startup.drawer.at(-1).visibleHeight - toggle.offsetHeight - 3) * scale));
+                const pixels = drawerCanvas.getContext('2d').getImageData(0, top, Math.ceil(8 * scale), height).data;
+                window.startup.drawerSides = pixels.some((value, i) => i % 4 === 3 && value > 0);
+              }
+            } else if (drawer?.dataset.entrance === 'complete') {
+              window.startup.drawerReady = !drawer.inert;
+              window.startup.drawerCanvasSame = drawer.querySelector('canvas[data-crt-frame]') === drawerCanvas;
+              window.startup.drawerSettledTop = drawer.offsetTop;
+            }
             const panel = document.querySelector('.portfolio-window');
             if (panel?.style.backgroundSize) {
               const height = parseFloat(panel.style.backgroundSize.split(' ')[1]);
@@ -63,7 +94,7 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
                 window.startup.reveals.push({ i, ms: performance.now() - window.startup.content });
               }
             }
-            if (seen.size < nodes.length) requestAnimationFrame(sample);
+            if (seen.size < nodes.length || !window.startup.drawerReady) requestAnimationFrame(sample);
           }
           requestAnimationFrame(sample);
         }, { once: true });
@@ -74,6 +105,16 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       assert.ok(screen?.width > 300 && screen?.height > 500, 'ad-block cosmetic rules must not collapse the viewport');
       assert.equal(await page.getByRole('link', { name:'GitHub', exact:true }).isVisible(), true);
       const startup = await page.evaluate(() => window.startup);
+      assert.ok(startup.drawer.length > 8, 'settings frame assembles across multiple frames');
+      assert.ok(startup.drawer.every(state => state.top === startup.drawer[0].top), 'settings handle stays in its final position throughout startup');
+      assert.ok(startup.drawer.every(state => state.inert && !state.open && !state.focused), 'hover, click and focus cannot interrupt the settings entrance');
+      assert.ok(startup.drawer.every(state => state.sameCanvas && state.canvases === 1) && startup.drawerCanvasSame, 'the complete drawer frame persists from tracing through interaction');
+      assert.equal(startup.drawerSides, true, 'the entrance includes ASCII sides below the header');
+      assert.equal(startup.drawerSettledTop, startup.drawer.at(-1).top, 'unlocking the drawer does not shift its position');
+      assert.ok(startup.drawer.every(state => state.shadow === 'none'), 'settings cast no shadow before they render');
+      assert.ok(startup.drawer.every((state, i) => state.layers === 1 && state.origin === '0%' && (!i || state.fill >= startup.drawer[i - 1].fill)), 'settings background advances downward from its top edge');
+      assert.ok(Math.abs(startup.drawer.at(-1).fill - startup.drawer.at(-1).visibleHeight) < .02, 'settings background covers the full visible drawer before completing');
+      assert.equal(startup.drawerReady, true, 'settings become interactive after their entrance completes');
       assert.ok(startup.openingHeights.length > 10, 'opening reveal spans multiple display frames');
       assert.ok(Math.max(...startup.openingHeights) - Math.min(...startup.openingHeights) < 1, 'opening reveals a stable CRT picture without rescaling its geometry');
       assert.ok(startup.fills.length > 8, 'panel background fills in multiple terminal rows');
@@ -111,7 +152,7 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
           if (!event.detail?.menuLayout || document.body.classList.contains('crt-disabled')) return;
           const output = document.querySelector('#screen-menu-details canvas[data-crt-renderer]');
           const gl = output.getContext(output.dataset.crtRenderer), program = gl.getParameter(gl.CURRENT_PROGRAM);
-          const rect = gl.getUniform(program, gl.getUniformLocation(program, 'uRect1'));
+          const rect = gl.getUniform(program, gl.getUniformLocation(program, 'uRect0'));
           const host = output.parentElement.getBoundingClientRect();
           const source = document.querySelector('#settings-drawer>canvas[data-crt-frame]').getBoundingClientRect();
           const expected = (source.top - host.top) / (host.height / output.parentElement.clientHeight);

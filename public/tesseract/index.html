@@ -23,10 +23,10 @@
     document.addEventListener('crt:contentstart', () => clearTimeout(startupDeadline), { once:true });
     window.addEventListener('error', recoverStartup, true);
   </script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-19">
+  <link rel="stylesheet" href="./assets/styles/style.css?v=startup-23">
   <script type="module" src="./assets/scripts/screen-intro.js?v=startup-19"></script>
   <script type="module" src="./assets/scripts/crt-init.js?v=startup-19"></script>
-  <script type="module" src="./assets/scripts/tesseract.js?v=startup-19"></script>
+  <script type="module" src="./assets/scripts/tesseract.js?v=startup-23"></script>
 </head>
 <body>
   <div id="screen-power" aria-hidden="true" inert></div>
@@ -103,7 +103,7 @@
   </div>
   </div>
   <div id="settings-surface" class="settings-surface">
-  <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="4D renderer settings">
+  <aside id="settings-drawer" class="settings-drawer terminal-window" aria-label="4D renderer settings" inert>
     <button id="drawer-toggle" class="window-titlebar drawer-toggle" type="button" aria-expanded="false" aria-controls="drawer-content"><span class="window-title">~/render/settings</span></button>
     <div id="drawer-content" class="controls-body drawer-content" inert aria-hidden="true">
       <p id="rotation-help" class="sr-only">Follow mouse is enabled by default: move the mouse to rotate in XZ and YZ without holding a button. Disable it to use click-and-drag. Hold Shift to drag in XW and YW. Scroll vertically to fold through ZW or horizontally to turn YW. The corner indicator shows the projected X, Y, Z and W axes and facing direction. The six angle sliders provide keyboard control of every rotation plane.</p>

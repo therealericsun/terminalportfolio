@@ -87,8 +87,7 @@ footer { position: absolute; bottom: 20px; width: fit-content; font-size: var(--
 /* One nonmodal drawer: all settings enter and leave together. */
 /* Keep the filtered surface stationary, but only as tall as the open drawer. */
 .settings-surface { position:absolute; z-index:5; bottom:0; height:calc(var(--drawer-height,400px) + var(--screen-height) * .026); right:calc(3.5vw + 4.2px); width:calc(36% + 75.6px); pointer-events:none; display:flex; flex-direction:column; justify-content:flex-end; }
-.settings-drawer { position:relative; flex:0 0 auto; margin-bottom:calc(var(--screen-height) * .026 - var(--drawer-height,400px) + var(--drawer-handle-height)); width:100%; pointer-events:auto; border-bottom: 0; box-shadow: 0 -8px 30px #0003; font-size: var(--body-font-size); line-height: 1.4; color: var(--muted); }
-.settings-drawer.is-entering { top:46px; }
+.settings-drawer { position:relative; flex:0 0 auto; margin-bottom:calc(var(--screen-height) * .026 - var(--drawer-height,400px) + var(--drawer-handle-height)); width:100%; pointer-events:auto; border-bottom: 0; font-size: var(--body-font-size); line-height: 1.4; color: var(--muted); }
 .settings-drawer.is-open { margin-bottom:calc(var(--screen-height) * .026); }
 .drawer-toggle { appearance: none; width: 100%; height: calc(var(--drawer-handle-height) - 1px); border: 0; border-bottom: 1px solid color-mix(in srgb,var(--rule) 55%,var(--bg)); border-radius: 0; font-family: inherit; text-align: left; cursor: pointer; }
 .drawer-toggle:hover { color: var(--gold); }
@@ -208,10 +207,8 @@ body:not(.crt-disabled) #screen-viewport * { text-shadow:0 0 calc(1px + var(--cr
 :is(.terminal-window,.orientation-indicator):has(>.ascii-frame)>.window-titlebar { background:transparent; }
 :is(.terminal-window,.orientation-indicator):has(>.ascii-frame) .window-title { color:transparent; }
 .ascii-frame { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; font:var(--body-font-size)/1.2 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; }
-.settings-drawer:has(.drawer-toggle.is-assembling)>.ascii-frame { visibility:hidden; }
-/* Trace the whole visible settings frame as it rises into view. */
+/* Keep the settings control in place while the whole drawer frame traces. */
 .drawer-toggle { position:relative; }
-.settings-drawer.is-entering { overflow:visible; }
 
 
 /* One screen coordinate system for GPU artwork and native HTML surfaces. */

@@ -19,13 +19,18 @@ document.addEventListener('visibilitychange', () => {
 });
 const revealDuration = .01 * loadingTimeScale;
 const framePause = .22;
+function visiblePanelHeight(panel, height) {
+  const viewport = panel.matches('.settings-drawer') && panel.closest('#screen-viewport');
+  return viewport ? Math.min(height, Math.max(0,
+    viewport.getBoundingClientRect().bottom - panel.getBoundingClientRect().top - panel.clientTop)) : height;
+}
 function rasterDepth(elapsed, sequence, height, cellHeight) {
-  const half = height / 2;
-  if (!sequence || !Number.isFinite(elapsed)) return half;
+  const extent = sequence?.direction === 'down' ? height : height / 2;
+  if (!sequence || !Number.isFinite(elapsed)) return extent;
   const { duration, delay } = sequence;
   const progress = Math.max(0, Math.min(1, (elapsed - delay - duration * .12) / (duration * .54)));
   const row = Math.max(2, Math.min(cellHeight, height / 24));
-  return progress === 1 ? half : Math.floor(half * progress / row) * row;
+  return progress === 1 ? extent : Math.floor(extent * progress / row) * row;
 }
 const contentPhase = group => group.matches('.intro') ? .43 : group.matches('.experience') ? .52
   : group.matches('.education-group') ? .59 : group.matches('.skills') ? .64
@@ -53,10 +58,11 @@ export class AsciiFrame {
       this.element.width = Math.max(1, Math.round(width * density));
       this.element.height = Math.max(1, Math.round(height * density));
       this.context.setTransform(density, 0, 0, density, 0, 0);
-      const columns = Math.max(2, Math.floor((width - 6) / cellWidth));
-      const left = (width - columns * cellWidth) / 2;
-      const right = width - left, top = 4;
-      const bottom = Math.max(top, panel.matches('.drawer-toggle') ? height - 1 : height - 4);
+      // Keep the background overhang at four pixels on every outer edge.
+      const left = 4, right = width - 4, top = 4;
+      const columns = Math.max(2, Math.floor((right - left) / cellWidth));
+      const columnWidth = (right - left) / columns;
+      const bottom = Math.max(top, height - 4);
       const titlebar = panel.querySelector('.window-titlebar');
       const header = titlebar?.offsetHeight ? titlebar : null;
       const headerY = header ? Math.min(bottom, header.offsetHeight) : null;
@@ -67,7 +73,7 @@ export class AsciiFrame {
       const sidePhase = y => .09 + traceStep(fromEnds((y - top) / Math.max(1, bottom - top)), .36);
       const horizontal = (y, startPhase = .09, travel = .36) => {
         for (let column = 1; column < columns; column++) {
-          glyph('-', left + column * cellWidth, y, startPhase + traceStep(fromEnds(column / columns), travel));
+          glyph('-', left + column * columnWidth, y, startPhase + traceStep(fromEnds(column / columns), travel));
         }
       };
       const vertical = x => {
@@ -131,7 +137,7 @@ export class AsciiFrame {
     }
     const headerVisible = !animated || elapsed >= textStart;
     if (this.header) this.header.style.visibility = headerVisible ? 'visible' : 'hidden';
-    const canvasKey = this.panel.dataset.frame === 'tracing' ? key : headerVisible ? 'settled-title' : 'settled-frame';
+    const canvasKey = !animated ? 'settled' : this.panel.dataset.frame === 'tracing' ? key : headerVisible ? 'settled-title' : 'settled-frame';
     if (canvasKey === this.canvasKey) {
       if (visibilityChanged) document.dispatchEvent(new CustomEvent('crt:frame', { detail:{ graphics:true } }));
       return;
@@ -140,16 +146,21 @@ export class AsciiFrame {
     const ctx = this.context;
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = style.getPropertyValue('--window-titlebar-bg').trim();
-    const depth = rasterDepth(elapsed, this.sequence, height, cellHeight);
+    const backgroundHeight = visiblePanelHeight(this.panel, height);
+    const depth = rasterDepth(elapsed, this.sequence, backgroundHeight, cellHeight);
     ctx.fillRect(0, 0, width, Math.min(headerHeight, depth));
-    const bottomStart = height - depth;
-    if (bottomStart < headerHeight) ctx.fillRect(0, bottomStart, width, headerHeight - bottomStart);
+    const bottomStart = backgroundHeight - depth;
+    if (this.sequence?.direction !== 'down' && bottomStart < headerHeight) ctx.fillRect(0, bottomStart, width, headerHeight - bottomStart);
     ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const point of this.points) {
-      const time = elapsed - delay - duration * point.phase;
+      const phase = this.sequence?.direction === 'down'
+        ? point.y <= 4 ? (point.corner ? 0 : .09) : .12 + .54 * point.y / backgroundHeight
+        : point.phase;
+      const time = elapsed - delay - duration * phase;
       if (animated && time < 0) continue;
       ctx.globalAlpha = animated ? Math.min(1, time / (duration * .04)) : 1;
-      ctx.fillStyle = animated ? palette[Math.min(4, Math.floor(time / (duration * (point.corner ? .38 : .24)) * 4))] : palette[4];
+      const colorDuration = this.sequence?.direction === 'down' ? .04 : point.corner ? .38 : .24;
+      ctx.fillStyle = animated ? palette[Math.min(4, Math.floor(time / (duration * colorDuration) * 4))] : palette[4];
       ctx.fillText(point.text, point.x, point.y);
     }
     ctx.globalAlpha = 1;
@@ -169,15 +180,19 @@ export class AsciiFrame {
 }
 
 export class Entrance {
-  constructor(target, reduced = false, { duration = 1.95, delay = 0, temporary = false } = {}) {
+  constructor(target, reduced = false, { duration = 1.95, delay = 0 } = {}) {
     duration *= loadingTimeScale; delay *= loadingTimeScale;
     this.duration = delay + duration * 1.25 + framePause;
     this.sequence = { duration, delay };
-    this.temporary = temporary; this.finished = false;
-    this.panel = target?.matches('.portfolio-window,.orientation-indicator,.drawer-toggle') ? target : target?.querySelector('.portfolio-window');
+    this.finished = false;
+    this.panel = target?.matches('.portfolio-window,.orientation-indicator,.settings-drawer') ? target : target?.querySelector('.portfolio-window');
     this.onFocus = () => this.finish();
     if (!this.panel) { this.finish(); return; }
-    this.backgroundHost = temporary ? this.panel.closest('.settings-drawer') || this.panel : this.panel;
+    if (this.panel.matches('.settings-drawer')) {
+      this.sequence.direction = 'down';
+      this.duration = delay + duration * .70 + framePause + revealDuration;
+    }
+    this.backgroundHost = this.panel;
     this.backgroundStyles = ['background-color', 'background-image', 'background-size', 'background-repeat', 'background-position']
       .map(property => [property, this.backgroundHost.style.getPropertyValue(property), this.backgroundHost.style.getPropertyPriority(property)]);
     this.ascii = new AsciiFrame(this.panel);
@@ -187,22 +202,22 @@ export class Entrance {
     this.frame.classList.add('assembly-frame');
     this.panel.classList.add('is-assembling');
     this.panel.dataset.entrance = 'opening';
-    // Paint opaque terminal rows inward from both edges; no fade or
-    // transformed child layer that could escape Safari's shared CRT filter.
+    // Off-screen drawers reveal downward; fully visible boxes fill inward.
     Object.assign(this.backgroundHost.style, {
-      backgroundColor:'transparent', backgroundImage:'linear-gradient(var(--window-bg),var(--window-bg)),linear-gradient(var(--window-bg),var(--window-bg))',
+      backgroundColor:'transparent', backgroundImage:Array(this.sequence.direction === 'down' ? 1 : 2)
+        .fill('linear-gradient(var(--window-bg),var(--window-bg))').join(','),
       backgroundRepeat:'no-repeat',
     });
     this.paint(0);
     this.panel.addEventListener('focusin', this.onFocus, { once:true });
   }
   paint(elapsed) {
-    const { height, cellHeight } = this.ascii.geometry;
+    const { height: panelHeight, cellHeight } = this.ascii.geometry;
+    const height = visiblePanelHeight(this.panel, panelHeight);
     const depth = rasterDepth(elapsed, this.sequence, height, cellHeight);
     const size = `100% ${depth}px`;
     if (this.backgroundHost.style.backgroundSize !== size) this.backgroundHost.style.backgroundSize = size;
-    // Use the animated panel's bottom, including the drawer's visible handle.
-    const position = `left top, left ${height - depth}px`;
+    const position = this.sequence.direction === 'down' ? 'left top' : `left top, left ${height - depth}px`;
     if (this.backgroundHost.style.backgroundPosition !== position) this.backgroundHost.style.backgroundPosition = position;
     this.ascii.paint(elapsed);
   }
@@ -215,8 +230,7 @@ export class Entrance {
   finish() {
     if (this.finished) return;
     this.finished = true;
-    if (this.temporary) this.ascii?.remove();
-    else { this.frame?.classList.remove('assembly-frame'); this.ascii?.paint(Infinity); }
+    this.frame?.classList.remove('assembly-frame'); this.ascii?.paint(Infinity);
     if (this.panel) {
       for (const [property, value, priority] of this.backgroundStyles) {
         if (value) this.backgroundHost.style.setProperty(property, value, priority);
