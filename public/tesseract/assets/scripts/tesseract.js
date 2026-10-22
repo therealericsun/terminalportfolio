@@ -725,7 +725,7 @@ followMouseToggle.addEventListener('change', () => {
   draw(); start();
 });
 window.addEventListener('pointermove', event => {
-  if (!sceneReady || event.pointerType !== 'mouse' || !event.isPrimary) return;
+  if (event.pointerType !== 'mouse' || !event.isPrimary) return;
   const previousMouse = lastMouse;
   lastMouse = { x: event.clientX, y: event.clientY };
   // Keep controls steady while editing, and avoid counting held drags twice.
@@ -738,8 +738,7 @@ window.addEventListener('pointermove', event => {
 // Wheel and touch scrolling turn planes involving W without taking over the
 // page's native scrolling, settings drawer, or browser pinch-to-zoom gesture.
 function turnFromScroll(dx, dy) {
-  if (!sceneReady || (!dx && !dy) || activeControl || dragging || document.hidden) return;
-  assemblyTime = assemblyDuration;
+  if ((!dx && !dy) || activeControl || dragging || document.hidden) return;
   // ZW trades visible depth for hidden depth: near/far layers pass through
   // one another rather than sweeping the silhouette sideways like XW.
   orientation.zw = wrapAngle(orientation.zw + clamp(dy, -240, 240) * .0035);

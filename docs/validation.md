@@ -37,6 +37,6 @@ Chromium, Firefox and WebKit checks cover 1024×700 compact desktop, 900×540 la
 
 A follow-up Firefox benchmark at 1440×1000 and 2× density retains 30 scene draws/sec. Settled animation callbacks measured 43.3/sec versus 45.6/sec before this change in short five-second samples; the adaptive path preserves the cached rendering used by fitting layouts.
 
-## Startup interaction · 2026-10-21
+## Startup interaction · 2026-10-22
 
-Panels preserve their original inert state through their entrances instead of finishing on focus. The first shape assembly gates pointer/follow-mouse input, scroll-driven rotation and the settings drawer; normal page scrolling still works. The gate is released when that assembly completes or reduced motion is requested, and is not reapplied by reset or seed changes. Browser regressions click and wheel during early assembly, try focusing a newly revealed link, and verify that assembly/reveal timing remains intact and interaction returns afterward.
+Panels preserve their original inert state through their entrances instead of finishing on focus. The first shape assembly gates direct clicks and the settings drawer; mouse-follow and wheel/touch rotation remain active without advancing the assembly clock. Normal page scrolling still works. The click gate is released when assembly completes or reduced motion is requested, and is not reapplied by reset or seed changes. Browser regressions verify mouse-driven XZ/YZ rotation and scroll-driven YW/ZW rotation during early assembly, click during assembly, try focusing a newly revealed link, and confirm that assembly/reveal timing remains intact and direct interaction returns afterward.

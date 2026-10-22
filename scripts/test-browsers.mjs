@@ -107,13 +107,29 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
       await page.goto(url);
       await page.waitForFunction(() => !document.documentElement.classList.contains('content-hold')
         && Number(document.querySelector('#tesseract').dataset.introTime) > .05);
+      const response = await page.evaluate(async () => {
+        const canvas = document.querySelector('#tesseract');
+        const before = canvas.dataset.angles.split(',').map(Number);
+        const target = document.body;
+        target.dispatchEvent(new PointerEvent('pointerout', {bubbles:true, relatedTarget:null}));
+        for (const [clientX, clientY] of [[50,50], [170,110]]) {
+          target.dispatchEvent(new PointerEvent('pointermove', {bubbles:true, pointerType:'mouse', isPrimary:true, clientX, clientY}));
+        }
+        target.dispatchEvent(new WheelEvent('wheel', {bubbles:true, deltaX:20, deltaY:40}));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return {before, after:canvas.dataset.angles.split(',').map(Number), intro:Number(canvas.dataset.introTime)};
+      });
+      const turned = plane => (response.after[plane] - response.before[plane] + 540) % 360 - 180;
+      assert.ok(turned(1) > 10 && turned(2) > 5, 'mouse-follow responds while the shape is assembling');
+      assert.ok(turned(4) > 1 && turned(5) > 4, 'scroll input rotates the W planes while assembling');
+      assert.ok(response.intro < 1.5, 'passive rotation leaves assembly in progress');
       if (!mobile) {
         const shape = await page.locator('#tesseract').boundingBox();
         await page.mouse.click(shape.x + shape.width / 2, shape.y + shape.height / 2);
         await page.mouse.wheel(0, 1);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         assert.ok(Number(await page.locator('#tesseract').getAttribute('data-intro-time')) < 1.5, 'early clicks and wheel input do not skip shape assembly');
-        assert.equal(await page.locator('#tesseract-scene').evaluate(e => e.inert), true, 'the assembling shape stays noninteractive');
+        assert.equal(await page.locator('#tesseract-scene').evaluate(e => e.inert), true, 'direct clicks stay gated during the first assembly');
       }
       await page.waitForFunction(() => document.querySelector('.portfolio-window')?.dataset.entrance === 'complete');
       await page.waitForFunction(() => !document.querySelector('#settings-drawer').inert && !document.querySelector('#tesseract-scene').inert);
