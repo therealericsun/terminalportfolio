@@ -77,6 +77,11 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
               window.startup.drawerSettledTop = drawer.offsetTop;
             }
             const panel = document.querySelector('.portfolio-window');
+            const link = panel?.querySelector('a');
+            if (!window.startup.panelAttempt && panel?.dataset.entrance === 'opening' && getComputedStyle(link).visibility === 'visible') {
+              link.focus();
+              window.startup.panelAttempt = {inert:panel.inert, focused:document.activeElement === link, entrance:panel.dataset.entrance};
+            }
             if (panel?.style.backgroundSize) {
               const height = parseFloat(panel.style.backgroundSize.split(' ')[1]);
               if (height !== window.startup.fills.at(-1)?.height) {
@@ -100,11 +105,24 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         }, { once: true });
       });
       await page.goto(url);
+      await page.waitForFunction(() => !document.documentElement.classList.contains('content-hold')
+        && Number(document.querySelector('#tesseract').dataset.introTime) > .05);
+      if (!mobile) {
+        const shape = await page.locator('#tesseract').boundingBox();
+        await page.mouse.click(shape.x + shape.width / 2, shape.y + shape.height / 2);
+        await page.mouse.wheel(0, 1);
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.ok(Number(await page.locator('#tesseract').getAttribute('data-intro-time')) < 1.5, 'early clicks and wheel input do not skip shape assembly');
+        assert.equal(await page.locator('#tesseract-scene').evaluate(e => e.inert), true, 'the assembling shape stays noninteractive');
+      }
       await page.waitForFunction(() => document.querySelector('.portfolio-window')?.dataset.entrance === 'complete');
+      await page.waitForFunction(() => !document.querySelector('#settings-drawer').inert && !document.querySelector('#tesseract-scene').inert);
       const screen = await page.locator('#screen-viewport').boundingBox();
       assert.ok(screen?.width > 300 && screen?.height > 500, 'ad-block cosmetic rules must not collapse the viewport');
       assert.equal(await page.getByRole('link', { name:'GitHub', exact:true }).isVisible(), true);
       const startup = await page.evaluate(() => window.startup);
+      assert.deepEqual(startup.panelAttempt, {inert:true, focused:false, entrance:'opening'}, 'focusing a newly revealed link cannot finish the panel entrance');
+      assert.equal(await page.locator('.portfolio-window').evaluate(e => e.inert), false, 'the completed panel restores interaction');
       assert.ok(startup.drawer.length > 8, 'settings frame assembles across multiple frames');
       assert.ok(startup.drawer.every(state => state.top === startup.drawer[0].top), 'settings handle stays in its final position throughout startup');
       assert.ok(startup.drawer.every(state => state.inert && !state.open && !state.focused), 'hover, click and focus cannot interrupt the settings entrance');

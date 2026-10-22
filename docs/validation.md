@@ -36,3 +36,7 @@ The copyright now follows the full panel in normal flow instead of overlapping i
 Chromium, Firefox and WebKit checks cover 1024×700 compact desktop, 900×540 landscape and 390×844 phone layouts with CRT enabled at 2× density. They verify at least 16px of footer clearance, identical native scroll offsets for the panel/name/outline across seven scroll positions, no nested panel/footer curvature, an unchanged displacement image throughout scrolling, and round-trip resizing between native scrolling and cached GPU modes. The existing startup, drawer, slider, reduced-motion, storage and recovery suites also pass in all three engines.
 
 A follow-up Firefox benchmark at 1440×1000 and 2× density retains 30 scene draws/sec. Settled animation callbacks measured 43.3/sec versus 45.6/sec before this change in short five-second samples; the adaptive path preserves the cached rendering used by fitting layouts.
+
+## Startup interaction · 2026-10-21
+
+Panels preserve their original inert state through their entrances instead of finishing on focus. The first shape assembly gates pointer/follow-mouse input, scroll-driven rotation and the settings drawer; normal page scrolling still works. The gate is released when that assembly completes or reduced motion is requested, and is not reapplied by reset or seed changes. Browser regressions click and wheel during early assembly, try focusing a newly revealed link, and verify that assembly/reveal timing remains intact and interaction returns afterward.

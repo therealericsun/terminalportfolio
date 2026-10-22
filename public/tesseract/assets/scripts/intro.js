@@ -186,8 +186,8 @@ export class Entrance {
     this.sequence = { duration, delay };
     this.finished = false;
     this.panel = target?.matches('.portfolio-window,.orientation-indicator,.settings-drawer') ? target : target?.querySelector('.portfolio-window');
-    this.onFocus = () => this.finish();
     if (!this.panel) { this.finish(); return; }
+    this.originalInert = this.panel.inert;
     if (this.panel.matches('.settings-drawer')) {
       this.sequence.direction = 'down';
       this.duration = delay + duration * .70 + framePause + revealDuration;
@@ -198,6 +198,7 @@ export class Entrance {
     this.ascii = new AsciiFrame(this.panel);
     this.frame = this.ascii.element;
     if (reduced) { this.finish(); return; }
+    this.panel.inert = true;
     this.ascii.sequence = this.sequence;
     this.frame.classList.add('assembly-frame');
     this.panel.classList.add('is-assembling');
@@ -209,7 +210,6 @@ export class Entrance {
       backgroundRepeat:'no-repeat',
     });
     this.paint(0);
-    this.panel.addEventListener('focusin', this.onFocus, { once:true });
   }
   paint(elapsed) {
     const { height: panelHeight, cellHeight } = this.ascii.geometry;
@@ -238,7 +238,7 @@ export class Entrance {
       }
       this.panel.classList.remove('is-assembling');
       this.panel.setAttribute('data-entrance', 'complete');
-      this.panel.removeEventListener('focusin', this.onFocus);
+      this.panel.inert = this.originalInert;
     }
   }
 }

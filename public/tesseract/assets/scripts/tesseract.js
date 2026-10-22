@@ -1,7 +1,7 @@
 import { vertices as tesseractVertices, edges as tesseractEdges, faces as tesseractFaces, projectOrientation, orientationAxes, rotationPlanes, initialOrientation, advanceOrientation, wrapAngle, sub, cross, unit, illumination, camera } from './tesseract-math.js?v=orientation-1';
 import { generatePolytope } from './polytope.js';
 import { createAsciiPalette, asciiColorIndex } from './ascii-theme.js';
-import { Entrance, loadingTimeScale } from './intro.js?v=perf-1';
+import { Entrance, loadingTimeScale } from './intro.js?v=interaction-1';
 import { initAsciiName } from './ascii-name.js?v=perf-1';
 
 const canvas = document.querySelector('#tesseract');
@@ -45,6 +45,9 @@ const updateScreenSize = () => screen.style.setProperty('--screen-height', `${sc
 new ResizeObserver(updateScreenSize).observe(screen);
 updateScreenSize();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+// Gate only the first assembly; later resets and seed changes stay interactive.
+let sceneReady = reduced.matches;
+scene.inert = !sceneReady;
 const setNameFontSize = initAsciiName();
 const entrance = new Entrance(document.querySelector('.page'), reduced.matches);
 const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
@@ -93,11 +96,11 @@ const extraPlanes = ['xw', 'yw', 'zw'];
 const drawer = document.querySelector('#settings-drawer');
 const drawerToggle = document.querySelector('#drawer-toggle');
 const drawerEntrance = new Entrance(drawer, reduced.matches, { duration: 1.3, delay: .45 });
-// Keep the handle stationary and inaccessible until its frame has assembled.
-drawer.inert = !drawerEntrance.finished;
+// Wait for both the drawer frame and the initial shape assembly before input.
+drawer.inert = !drawerEntrance.finished || !sceneReady;
 const finishDrawerEntrance = () => {
   drawerEntrance.finish();
-  drawer.inert = false;
+  drawer.inert = !sceneReady;
 };
 const drawerContent = document.querySelector('#drawer-content');
 const sliders = [...drawer.querySelectorAll('input[type="range"]')];
@@ -480,7 +483,7 @@ function tick(now) {
   if (axisEntrance && !axisEntrance.finished) axisEntrance.update();
   if (!drawerEntrance.finished) {
     drawerEntrance.update();
-    if (drawerEntrance.finished) drawer.inert = false;
+    if (drawerEntrance.finished) drawer.inert = !sceneReady;
   }
   const canAnimate = !activeControl && (!dragging || settings.followMouse);
   if (canAnimate) {
@@ -493,6 +496,7 @@ function tick(now) {
       advanceOrientation(orientation, delta, pointerTurning ? extraPlanes : rotationPlanes);
     }
   }
+  if (!sceneReady && assemblyTime >= assemblyDuration) unlockScene();
   const needsFinalFrame = assemblyTime >= assemblyDuration && canvas.dataset.intro !== 'complete';
   if (accumulator >= 1 / 30 || needsFinalFrame || scrollNeedsDraw) {
     draw(); accumulator %= 1 / 30; scrollNeedsDraw = false;
@@ -503,10 +507,16 @@ function tick(now) {
 function start() {
   if (!frame && !document.hidden) frame = requestAnimationFrame(tick);
 }
+function unlockScene() {
+  sceneReady = true;
+  scene.inert = false;
+  if (drawerEntrance.finished) drawer.inert = false;
+}
 function applyMotionPreference() {
   if (motionReduced === reduced.matches) return;
   motionReduced = reduced.matches;
   paused = motionReduced; assemblyTime = assemblyDuration;
+  unlockScene();
   entrance.finish(); finishDrawerEntrance();
 }
 reduced.addEventListener('change', () => { applyMotionPreference(); draw(); start(); });
@@ -544,7 +554,7 @@ function moveDrawer(from, to) {
   drawerMotion = requestAnimationFrame(step);
 }
 function setDrawerOpen(open) {
-  if (!drawerEntrance.finished) return;
+  if (!drawerEntrance.finished || !sceneReady) return;
   clearTimeout(hoverCloseTimer);
   if (drawer.classList.contains('is-open') === open) return;
   if (!open && drawerContent.contains(document.activeElement)) drawerToggle.focus();
@@ -691,7 +701,7 @@ document.querySelector('#shape-form').addEventListener('submit', event => {
   draw(); start();
 });
 canvas.addEventListener('pointerdown', event => {
-  if (event.button !== 0 || !event.isPrimary) return;
+  if (!sceneReady || event.button !== 0 || !event.isPrimary) return;
   assemblyTime = assemblyDuration;
   dragging = { id: event.pointerId, x: event.clientX, y: event.clientY };
   canvas.setPointerCapture(event.pointerId); canvas.classList.add('is-dragging');
@@ -715,7 +725,7 @@ followMouseToggle.addEventListener('change', () => {
   draw(); start();
 });
 window.addEventListener('pointermove', event => {
-  if (event.pointerType !== 'mouse' || !event.isPrimary) return;
+  if (!sceneReady || event.pointerType !== 'mouse' || !event.isPrimary) return;
   const previousMouse = lastMouse;
   lastMouse = { x: event.clientX, y: event.clientY };
   // Keep controls steady while editing, and avoid counting held drags twice.
@@ -728,7 +738,7 @@ window.addEventListener('pointermove', event => {
 // Wheel and touch scrolling turn planes involving W without taking over the
 // page's native scrolling, settings drawer, or browser pinch-to-zoom gesture.
 function turnFromScroll(dx, dy) {
-  if ((!dx && !dy) || activeControl || dragging || document.hidden) return;
+  if (!sceneReady || (!dx && !dy) || activeControl || dragging || document.hidden) return;
   assemblyTime = assemblyDuration;
   // ZW trades visible depth for hidden depth: near/far layers pass through
   // one another rather than sweeping the silhouette sideways like XW.
